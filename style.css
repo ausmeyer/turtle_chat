@@ -116,7 +116,6 @@ body {
     align-items: center !important;
 }
 
-/* Adjust styles for password input */
 [data-testid="stTextInput"] {
     max-width: 300px;
     margin: 20px auto !important;
@@ -134,9 +133,9 @@ body {
 }
 
 [data-testid="stTextInput"] input {
-    padding: 12px 16px !important;
-    height: 48px !important;  /* Increased height */
-    line-height: 24px !important;
+    height: 48px !important;  /* Maintain increased height */
+    padding: 0 16px !important;  /* Remove vertical padding */
+    line-height: 48px !important;  /* Match line-height to height */
     font-size: 16px !important;
     box-sizing: border-box !important;
     border-radius: 4px !important;
