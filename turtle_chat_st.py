@@ -223,12 +223,18 @@ if st.session_state.messages or st.session_state.file_content:
         clear_button_col1, clear_button_col2, clear_button_col3 = st.columns([1, 2, 1])
         with clear_button_col2:
             if st.button("Clear Conversation"):
+                # Clear all relevant session state variables
                 if st.session_state.file_key:
-                    delete_from_s3(st.session_state.file_key)
+                    try:
+                        delete_from_s3(st.session_state.file_key)
+                    except Exception as e:
+                        st.error(f"Error deleting file from S3: {e}")
+
                 st.session_state.messages = [{"role": "assistant", "content": "How can I help?"}]
                 st.session_state.file_content = ""
                 st.session_state.file_key = ""
                 st.session_state.uploaded_file = None
-                # Increment the file uploader key to force a reset
                 st.session_state.file_uploader_key += 1
-                st.experimental_rerun()
+
+                # Use st.rerun() instead of st.experimental_rerun()
+                st.rerun()
