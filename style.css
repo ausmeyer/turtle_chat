@@ -116,10 +116,23 @@ body {
     align-items: center !important;
 }
 
-/* Style for narrowing the password input */
+/* Style for password input */
 [data-testid="stTextInput"] > div:first-child {
     max-width: 300px;
     margin: auto;
+}
+
+/* Fix for clipped text in password input */
+[data-testid="stTextInput"] input {
+    padding: 0.5rem 1rem !important;
+    line-height: 1.5 !important;
+    font-size: 1rem !important;
+}
+
+/* Adjust label positioning if needed */
+[data-testid="stTextInput"] label {
+    padding-bottom: 0.25rem !important;
+    line-height: 1.2 !important;
 }
 
 /* Responsive design */
