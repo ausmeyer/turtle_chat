@@ -121,10 +121,6 @@ body {
     margin: 20px auto !important;
 }
 
-[data-testid="stTextInput"] > div {
-    padding: 0 !important;
-}
-
 [data-testid="stTextInput"] input {
     height: 48px !important;  /* Maintain increased height */
     padding: 0 16px !important;  /* Remove vertical padding */
