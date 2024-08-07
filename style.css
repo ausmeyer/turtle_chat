@@ -82,10 +82,17 @@ body {
     text-align: center;
 }
 
-/* Custom styles for chat input */
 .stChatInput {
     border-top: 1px solid #e0e0e0;
     padding-top: 1rem;
+}
+
+/* Fix for enlarged chat input */
+.stChatInput textarea {
+    height: 50px !important;
+    min-height: 50px !important;
+    max-height: 200px !important;
+    overflow-y: auto;
 }
 
 /* Style for narrowing the password input */
