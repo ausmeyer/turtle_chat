@@ -118,12 +118,7 @@ body {
 
 [data-testid="stTextInput"] {
     max-width: 300px;
-    margin: 20px auto !important;
-}
-
-[data-testid="stTextInput"] input {
-    height: 48px !important;  /* Maintain increased height */
-    padding: 0 16px !important;  /* Remove vertical padding */
+    margin: auto !important;
 }
 
 /* Responsive design */
