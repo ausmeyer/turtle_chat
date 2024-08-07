@@ -85,25 +85,31 @@ body {
 /* Custom styles for chat input */
 .stChatInput {
     border-top: 1px solid #e0e0e0;
-    padding-top: 0.5rem;  /* Reduced padding */
+    padding-top: 0.3rem;  /* Further reduced padding */
 }
 
 /* Fix for enlarged chat input */
 .stChatInput textarea {
-    height: 40px !important;  /* Reduced from 50px */
-    min-height: 40px !important;  /* Reduced from 50px */
-    max-height: 100px !important;  /* Reduced from 200px */
+    height: 32px !important;  /* Reduced from 40px */
+    min-height: 32px !important;  /* Reduced from 40px */
+    max-height: 80px !important;  /* Reduced from 100px */
     overflow-y: auto;
-    padding: 8px 10px !important;  /* Added padding for text */
-    line-height: 1.2 !important;  /* Adjusted line height */
-    font-size: 14px !important;  /* Adjusted font size */
+    padding: 6px 8px !important;  /* Slightly reduced padding */
+    line-height: 1.1 !important;  /* Slightly reduced line height */
+    font-size: 13px !important;  /* Slightly reduced font size */
 }
 
 /* Adjust the send button size */
 .stChatInput button {
-    height: 40px !important;  /* Match the height of the textarea */
-    width: 40px !important;  /* Make it square */
+    height: 32px !important;  /* Match the height of the textarea */
+    width: 32px !important;  /* Keep it square */
     padding: 0 !important;  /* Remove padding */
+}
+
+/* Adjust the button icon size */
+.stChatInput button svg {
+    width: 18px !important;  /* Reduce icon size */
+    height: 18px !important;
 }
 
 /* Style for narrowing the password input */
