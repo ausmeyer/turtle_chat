@@ -8,6 +8,10 @@ from langchain_community.chat_models import BedrockChat
 from langchain.memory import ConversationBufferMemory
 import uuid
 
+# Set AWS credentials from Streamlit secrets
+os.environ['AWS_ACCESS_KEY_ID'] = st.secrets.aws_credentials.aws_access_key_id
+os.environ['AWS_SECRET_ACCESS_KEY'] = st.secrets.aws_credentials.aws_secret_access_key
+
 def check_password():
     """Returns `True` if the user had the correct password."""
 
