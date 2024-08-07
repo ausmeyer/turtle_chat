@@ -104,26 +104,6 @@ body {
     margin: 0 !important;
 }
 
-/* Adjust the send button size */
-.stChatInput button {
-    height: 24px !important;  /* Match the height of the textarea */
-    width: 24px !important;  /* Keep it square */
-    padding: 0 !important;
-    min-height: 24px !important;
-    margin: 0 !important;
-}
-
-/* Adjust the button icon size */
-.stChatInput button svg {
-    width: 20px !important;  /* Further reduce icon size */
-    height: 20px !important;
-}
-
-/* Adjust the overall chat input container */
-.stChatInput > div > div {
-    padding: 0 !important;
-}
-
 /* Style for narrowing the password input */
 [data-testid="stTextInput"] > div:first-child {
     max-width: 300px;
