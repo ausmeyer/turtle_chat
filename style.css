@@ -125,13 +125,6 @@ body {
     padding: 0 !important;
 }
 
-[data-testid="stTextInput"] label {
-    margin-bottom: 8px !important;
-    line-height: 1.5 !important;
-    font-size: 14px !important;
-    display: block !important;
-}
-
 [data-testid="stTextInput"] input {
     height: 48px !important;  /* Maintain increased height */
     padding: 0 16px !important;  /* Remove vertical padding */
