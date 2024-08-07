@@ -142,13 +142,6 @@ body {
     border-radius: 4px !important;
 }
 
-/* Adjust the position of the password visibility toggle */
-[data-testid="stTextInput"] .eyeIcon {
-    top: 50% !important;
-    transform: translateY(-50%) !important;
-    right: 10px !important;
-}
-
 /* Responsive design */
 @media (max-width: 768px) {
     .chat-message .message-content {
