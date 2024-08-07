@@ -116,10 +116,10 @@ body {
     align-items: center !important;
 }
 
-/* Reset and adjust styles for password input */
+/* Adjust styles for password input */
 [data-testid="stTextInput"] {
     max-width: 300px;
-    margin: auto;
+    margin: 20px auto !important;
 }
 
 [data-testid="stTextInput"] > div {
@@ -127,19 +127,28 @@ body {
 }
 
 [data-testid="stTextInput"] label {
-    margin-bottom: 5px !important;
-    line-height: normal !important;
+    margin-bottom: 8px !important;
+    line-height: 1.5 !important;
     font-size: 14px !important;
+    display: block !important;
 }
 
 [data-testid="stTextInput"] input {
-    padding: 8px 12px !important;
-    height: auto !important;
-    min-height: 36px !important;
-    line-height: 20px !important;
-    font-size: 14px !important;
+    padding: 12px 16px !important;
+    height: 48px !important;  /* Increased height */
+    line-height: 24px !important;
+    font-size: 16px !important;
     box-sizing: border-box !important;
+    border-radius: 4px !important;
 }
+
+/* Adjust the position of the password visibility toggle */
+[data-testid="stTextInput"] .eyeIcon {
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    right: 10px !important;
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
     .chat-message .message-content {
