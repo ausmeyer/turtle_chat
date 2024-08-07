@@ -118,7 +118,7 @@ body {
 
 [data-testid="stTextInput"] {
     max-width: 300px;
-    margin: auto !important;
+    margin: 10px auto !important;
 }
 
 /* Responsive design */
