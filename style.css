@@ -124,8 +124,6 @@ body {
 [data-testid="stTextInput"] input {
     height: 48px !important;  /* Maintain increased height */
     padding: 0 16px !important;  /* Remove vertical padding */
-    line-height: 48px !important;  /* Match line-height to height */
-    box-sizing: border-box !important;
 }
 
 /* Responsive design */
