@@ -15,7 +15,7 @@ from langchain.memory import ConversationBufferMemory
 # Constants
 S3_BUCKET_NAME = 'chatdshs'
 AWS_REGION = 'us-west-2'
-MODEL_ID = "meta.llama3-1-405b-instruct-v1:0"
+MODEL_ID = "anthropic.claude-3-5-sonnet-20240620-v1:0"  # Updated to Claude 3.5 Sonnet
 ALLOWED_FILE_TYPES = ["pdf", "png"]
 
 # Set AWS credentials from Streamlit secrets
@@ -64,9 +64,8 @@ def load_llm() -> ConversationChain:
         model_id=MODEL_ID,
         model_kwargs={
             "temperature": 0.7,
-            "top_p": 0.95,
-            "max_gen_len": 4096,
-            "stop": ["Human:", "Assistant:", "User's question:"]
+            "top_p": 1,
+            "max_tokens": 10000
         }
     )
     return ConversationChain(llm=llm, verbose=True, memory=ConversationBufferMemory())
@@ -139,24 +138,24 @@ def display_typing_indicator():
 
 def get_ai_response(model: ConversationChain, prompt: str, file_content: Optional[str]) -> str:
     """Get AI response based on the user's prompt and file content if available."""
-    system_prompt = '''You are a helpful AI assistant with broad knowledge. Provide accurate and relevant responses to user queries. If file content is provided, use it as a reference when appropriate, but don't hesitate to use your general knowledge for questions not directly related to the file. Aim for clear and concise answers.'''
+    system_prompt = '''Human: You are Claude, an AI assistant created by Anthropic to be helpful, harmless, and honest. Please provide accurate and relevant responses to user queries. If file content is provided, use it as a reference when appropriate, but don't hesitate to use your general knowledge for questions not directly related to the file. Aim for clear and concise answers.'''
 
     if file_content:
         combined_input = f'''{system_prompt}
 
-Here is the content of an uploaded file:
+                            Here is the content of an uploaded file:
 
-{file_content}
+                            {file_content}
 
-User's question: {prompt}
+                            User's question: {prompt}
 
-Please concisely respond to the user's question. You may use the file content if relevant, but be sure to draw on your general knowledge as needed.'''
+                            Please concisely respond to the user's question. You may use the file content if relevant, but be sure to draw on your general knowledge as needed.'''
     else:
         combined_input = f'''{system_prompt}
 
-User's question: {prompt}
+                            User's question: {prompt}
 
-Please concisely respond to the user's question based on your general knowledge.'''
+                            Please concisely respond to the user's question based on your general knowledge.'''
 
     response = model.predict(input=combined_input)
     
@@ -196,6 +195,27 @@ def display_chat_interface(model: ConversationChain) -> None:
         display_chat_message("assistant", result)
         st.session_state.messages.append({"role": "assistant", "content": result})
 
+def display_chat_interface(model: ConversationChain) -> None:
+    """Display and handle the chat interface."""
+    for message in st.session_state.messages:
+        display_chat_message(message["role"], message["content"])
+
+    if prompt := st.chat_input("Enter text"):
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        display_chat_message("user", prompt)
+
+        typing_indicator = st.empty()
+        with typing_indicator:
+            display_typing_indicator()
+
+        with st.spinner(text=''):
+            result = get_ai_response(model, prompt, st.session_state.file_content)
+
+        typing_indicator.empty()
+
+        display_chat_message("assistant", result)
+        st.session_state.messages.append({"role": "assistant", "content": result})
+
 def display_clear_button() -> None:
     """Display the clear conversation button and handle its functionality."""
     if st.button("🗑️ Clear Conversation", key="clear_button"):
@@ -206,8 +226,8 @@ def display_clear_button() -> None:
         st.session_state.file_key = ""
         st.session_state.uploaded_file = None
         st.session_state.file_uploader_key += 1
-        st.rerun()
-        #st.experimental_rerun()
+        #st.rerun()
+        st.experimental_rerun()
 
 def main():
     """Main function to run the Streamlit app."""
@@ -248,6 +268,9 @@ def main():
 
     if st.session_state.messages or st.session_state.file_content:
         display_clear_button()
+    
+    # Add white space after all elements
+    st.markdown("<div style='padding-bottom: 100px'></div>", unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
