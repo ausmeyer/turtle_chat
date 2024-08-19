@@ -226,8 +226,8 @@ def display_clear_button() -> None:
         st.session_state.file_key = ""
         st.session_state.uploaded_file = None
         st.session_state.file_uploader_key += 1
-        #st.rerun()
-        st.experimental_rerun()
+        st.rerun()
+        #st.experimental_rerun()
 
 def main():
     """Main function to run the Streamlit app."""
