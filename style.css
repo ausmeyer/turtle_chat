@@ -7,9 +7,16 @@ body, .stApp, .main, .css-1d391kg, .css-18e3th9 {
     background-color: #D1DACB !important;  /* Change the background color */
 }
 
+
+/* need both of these due to api changes */
+[data-testid="stFileUploaderDropzone"] {
+    background-color: #F3F7F0 !important;  /* Change the background color */
+}
+
 [data-testid="stFileUploadDropzone"] {
     background-color: #F3F7F0 !important;  /* Change the background color */
 }
+
 
 body {
     font-family: 'Roboto', sans-serif;
