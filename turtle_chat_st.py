@@ -158,47 +158,30 @@ def display_chat_message(role: str, content: str):
         """, unsafe_allow_html=True)
 
 def display_chat_interface(model: ConversationChain) -> None:
-    st.markdown('<div class="chat-container">', unsafe_allow_html=True)
-    
-    # Display existing messages
-    for message in st.session_state.messages:
-        display_chat_message(message["role"], message["content"])
-    
-    # Create placeholders for new messages
-    user_placeholder = st.empty()
-    ai_placeholder = st.empty()
-    
-    st.markdown('</div>', unsafe_allow_html=True)
+    chat_container = st.container()
+    with chat_container:
+        for message in st.session_state.messages:
+            display_chat_message(message["role"], message["content"])
+        
+        # Add a placeholder for the typing indicator
+        typing_indicator = st.empty()
 
     if prompt := st.chat_input("Enter text"):
-        # Display user message
-        user_placeholder.markdown(f'''
-        <div class="chat-message user">
-            <div class="avatar">🧑🏼</div>
-            <div class="message-content">{prompt}</div>
-        </div>
-        ''', unsafe_allow_html=True)
-        
-        # Display typing indicator
-        with ai_placeholder:
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        with chat_container:
+            display_chat_message("user", prompt)
+
+        with typing_indicator:
             display_typing_indicator()
-        
-        # Generate AI response
-        result = get_ai_response(model, prompt, st.session_state.file_content)
-        
-        # Update AI message placeholder with the response
-        ai_placeholder.markdown(f'''
-        <div class="chat-message assistant">
-            <div class="avatar">🐢</div>
-            <div class="message-content">{result}</div>
-        </div>
-        ''', unsafe_allow_html=True)
-        
-        # Add messages to session state
-        st.session_state.messages.extend([
-            {"role": "user", "content": prompt},
-            {"role": "assistant", "content": result}
-        ])
+
+        with st.spinner(text=''):
+            result = get_ai_response(model, prompt, st.session_state.file_content)
+
+        typing_indicator.empty()
+
+        with chat_container:
+            display_chat_message("assistant", result)
+        st.session_state.messages.append({"role": "assistant", "content": result})
 
 def display_clear_button() -> None:
     if st.button("🗑️ Clear Conversation", key="clear_button"):
