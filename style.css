@@ -1,129 +1,154 @@
-body {
-    background-color: #f0f2f5;
-    font-family: 'Roboto', sans-serif;
+/* Global styles */
+body, .stApp, .main, .css-1d391kg, .css-18e3th9 {
+    background-color: #E5EEDF !important;
 }
 
+/* Targeting the sidebar specifically */
+.css-vk3wp9, .css-7ym5gk {
+    background-color: #D1DACB !important;
+    color: black !important;
+}
+
+.css-taue2i {
+    background-color: #F3F7F0 !important;
+}
+
+body {
+    font-family: 'Roboto', sans-serif;
+}
+/* Main container styles */
 .main .block-container {
+    max-width: 900px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
     padding-top: 2rem;
     padding-bottom: 2rem;
 }
 
+/* Chat container */
+.chat-container {
+    max-width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+}
+/* Chat message styles */
+.chat-message {
+    display: flex;
+    margin-bottom: 1rem;
+    align-items: flex-start;
+}
+.chat-message .message-content {
+    max-width: calc(80%);
+    background-color: #e9e9eb;
+    border-radius: 1rem;
+    padding: 0.5rem 1rem;
+    margin-left: 1rem;
+    display: inline-block;
+}
+.chat-message.user .message-content {
+    background-color: #D1DACB;
+    color: black;
+}
+.chat-message.assistant .message-content {
+    background-color: #F3F7F0;
+    color: black;
+}
+/* Avatar styles */
+.avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+}
+/* Input styles */
 .stTextInput > div > div > input {
     border-radius: 20px;
 }
-
 .stButton > button {
     border-radius: 20px;
     background-color: #4267B2;
     color: white;
 }
-
-.chat-message {
-    padding: 1rem;
-    border-radius: 0.5rem;
-    margin-bottom: 1rem;
-    display: flex;
-    align-items: flex-start;
-}
-
-.chat-message.user {
-    justify-content: flex-end;
-}
-
-.chat-message.assistant {
-    justify-content: flex-start;
-}
-
-.chat-message .message-content {
-    max-width: 80%;
-    padding: 0.5rem 1rem;
-    border-radius: 1rem;
-}
-
-.chat-message.user .message-content {
-    background-color: #4267B2;
-    color: white;
-}
-
-.chat-message.assistant .message-content {
-    background-color: lightgrey;
-    color: black;
-}
-
-.avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    margin-right: 1rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 20px;
-}
-
-.user .avatar {
-    color: white;
-}
-
-.assistant .avatar {
-    color: white;
-}
-
-/* Custom styles for sidebar */
-.sidebar .sidebar-content {
-    background-color: #ffffff;
-}
-
-/* Custom styles for file uploader */
+/* File uploader styles */
 .stFileUploader {
     padding: 1rem;
     border: 2px dashed #4267B2;
     border-radius: 10px;
     text-align: center;
 }
-
-/* Custom styles for chat input */
-.stChatInput {
-    border-top: 1px solid #e0e0e0;
-    padding: 0 !important;
-    margin: 0 !important;
+/* Clear Conversation button */
+.stButton {
+    margin-left: 20px;
 }
-
-/* Remove padding from container elements */
-.stChatInput > div,
-.stChatInput > div > div {
-    padding: 0 !important;
-    margin: 0 !important;
-}
-
-/* Adjust the textarea */
-.stChatInput textarea {
-    padding: 8px 10px !important;
-    margin: 0 !important;
-    border: none !important;
-    border-radius: 20px 0 0 20px !important;
-}
-
-/* Adjust the send button */
-.stChatInput button {
-    margin: 0 !important;
-    border-radius: 0 20px 20px 0 !important;
-}
-
-/* Ensure the input and button are on the same line */
-.stChatInput > div > div {
-    display: flex !important;
-    align-items: center !important;
-}
-
-[data-testid="stTextInput"] {
-    max-width: 300px;
-    margin: 10px auto !important;
-}
-
 /* Responsive design */
-@media (max-width: 768px) {
-    .chat-message .message-content {
-        max-width: 90%;
+@media (max-width: 900px) {
+    .main .block-container,
+    .stChatFloatingInputContainer {
+        max-width: 90% !important;
     }
+    .stChatFloatingInputContainer {
+        right: calc(5% - 40px) !important;
+    }
+    .chat-message .message-content {
+        max-width: calc(100%);
+    }
+}
+/* Typing indicator */
+.typing-indicator {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+.typing-indicator .turtle {
+    font-size: 24px;
+    margin-right: 10px;
+}
+.typing-indicator .typing-text {
+    font-size: 14px;
+    color: #555;
+}
+.typing-indicator .dot {
+    width: 8px;
+    height: 8px;
+    background-color: #555;
+    border-radius: 50%;
+    margin-left: 3px;
+    animation: typing-dot 1.5s infinite ease-in-out;
+}
+.typing-indicator .dot:nth-child(2) {
+    animation-delay: 0.2s;
+}
+.typing-indicator .dot:nth-child(3) {
+    animation-delay: 0.4s;
+}
+@keyframes typing-dot {
+    0%, 60%, 100% { transform: translateY(0); }
+    30% { transform: translateY(-5px); }
+}
+/* Center the title */
+.stApp > header {
+    background-color: transparent !important;
+}
+.stApp > header > div > div > div > a > svg {
+    display: none;
+}
+h1 {
+    text-align: center !important;
+}
+
+/* Target the bottom padding area and ensure consistent background color */
+.stApp > div:last-child,
+.stApp footer,
+.stChatFloatingInputContainer,
+.stChatInputContainer {
+    background-color: #E5EEDF !important;
+}
+
+/* Ensure the input field maintains its original background */
+.stChatInputContainer textarea {
+    background-color: white !important;
 }
