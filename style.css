@@ -3,14 +3,12 @@ body, .stApp, .main, .css-1d391kg, .css-18e3th9 {
     background-color: #E5EEDF !important;
 }
 
-/* Targeting the sidebar specifically */
-.css-vk3wp9, .css-7ym5gk {
-    background-color: #D1DACB !important;
-    color: black !important;
+[data-testid="stSidebar"] {
+    background-color: #D1DACB !important;  /* Change the background color */
 }
 
-.css-taue2i {
-    background-color: #F3F7F0 !important;
+[data-testid="stFileUploadDropzone"] {
+    background-color: #F3F7F0 !important;  /* Change the background color */
 }
 
 body {
@@ -70,8 +68,9 @@ body {
 }
 .stButton > button {
     border-radius: 20px;
-    background-color: #4267B2;
-    color: white;
+    background-color: #D1DACB;
+    color: black;
+    margin-left: 20px;
 }
 /* File uploader styles */
 .stFileUploader {
@@ -80,10 +79,7 @@ body {
     border-radius: 10px;
     text-align: center;
 }
-/* Clear Conversation button */
-.stButton {
-    margin-left: 20px;
-}
+
 /* Responsive design */
 @media (max-width: 900px) {
     .main .block-container,
