@@ -158,24 +158,47 @@ def display_chat_message(role: str, content: str):
         """, unsafe_allow_html=True)
 
 def display_chat_interface(model: ConversationChain) -> None:
+    st.markdown('<div class="chat-container">', unsafe_allow_html=True)
+    
+    # Display existing messages
     for message in st.session_state.messages:
         display_chat_message(message["role"], message["content"])
+    
+    # Create placeholders for new messages
+    user_placeholder = st.empty()
+    ai_placeholder = st.empty()
+    
+    st.markdown('</div>', unsafe_allow_html=True)
 
     if prompt := st.chat_input("Enter text"):
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        display_chat_message("user", prompt)
-
-        typing_indicator = st.empty()
-        with typing_indicator:
+        # Display user message
+        user_placeholder.markdown(f'''
+        <div class="chat-message user">
+            <div class="avatar">🧑🏼</div>
+            <div class="message-content">{prompt}</div>
+        </div>
+        ''', unsafe_allow_html=True)
+        
+        # Display typing indicator
+        with ai_placeholder:
             display_typing_indicator()
-
-        with st.spinner(text=''):
-            result = get_ai_response(model, prompt, st.session_state.file_content)
-
-        typing_indicator.empty()
-
-        display_chat_message("assistant", result)
-        st.session_state.messages.append({"role": "assistant", "content": result})
+        
+        # Generate AI response
+        result = get_ai_response(model, prompt, st.session_state.file_content)
+        
+        # Update AI message placeholder with the response
+        ai_placeholder.markdown(f'''
+        <div class="chat-message assistant">
+            <div class="avatar">🐢</div>
+            <div class="message-content">{result}</div>
+        </div>
+        ''', unsafe_allow_html=True)
+        
+        # Add messages to session state
+        st.session_state.messages.extend([
+            {"role": "user", "content": prompt},
+            {"role": "assistant", "content": result}
+        ])
 
 def display_clear_button() -> None:
     if st.button("🗑️ Clear Conversation", key="clear_button"):
@@ -187,7 +210,6 @@ def display_clear_button() -> None:
         st.session_state.uploaded_file = None
         st.session_state.file_uploader_key += 1
         st.rerun()
-        #st.experimental_rerun()
 
 def main():
     st.set_page_config(page_title="🐢 Turtle Chat 🐢", layout="wide")
@@ -218,18 +240,15 @@ def main():
 
     if uploaded_file and not st.session_state.file_key:
         process_uploaded_file(uploaded_file)
-
-    st.markdown("<h1>🐢 Turtle Chat 🐢</h1>", unsafe_allow_html=True)
     
-    with st.container():
+    chat_container = st.container()
+    with chat_container:
         st.markdown('<div class="chat-container">', unsafe_allow_html=True)
         display_chat_interface(model)
         st.markdown('</div>', unsafe_allow_html=True)
 
     if st.session_state.messages or st.session_state.file_content:
         display_clear_button()
-    
-    st.markdown("<div style='padding-bottom: 100px'></div>", unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()

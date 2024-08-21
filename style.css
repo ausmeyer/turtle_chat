@@ -1,27 +1,17 @@
 /* Global styles */
-body, .stApp, .main, .css-1d391kg, .css-18e3th9 {
+body, .stApp, .main {
     background-color: #E5EEDF !important;
-}
-
-h1 {
-    text-align: center !important;
     font-family: 'Roboto', sans-serif !important;
-    font-size: 28px !important;
-    margin-bottom: 20px !important;
+    font-size: 16px !important;
 }
 
 [data-testid="stSidebar"] {
-    background-color: #D1DACB !important;  /* Change the background color */
+    background-color: #D1DACB !important;
 }
 
-
-/* need both of these due to api changes */
-[data-testid="stFileUploaderDropzone"] {
-    background-color: #F3F7F0 !important;  /* Change the background color */
-}
-
+[data-testid="stFileUploaderDropzone"],
 [data-testid="stFileUploadDropzone"] {
-    background-color: #F3F7F0 !important;  /* Change the background color */
+    background-color: #F3F7F0 !important;
 }
 
 /* Main container styles */
@@ -29,38 +19,44 @@ h1 {
     max-width: 900px !important;
     margin-left: auto !important;
     margin-right: auto !important;
-    padding-top: 2rem;
-    padding-bottom: 2rem;
+    padding-top: 1rem;
+    padding-bottom: 100px;
+    display: flex;
+    flex-direction: column;
 }
 
-/* Chat container */
 .chat-container {
-    max-width: 100%;
-    margin-left: auto;
-    margin-right: auto;
+    flex-grow: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column-reverse; 
+    min-height: 50px; /* Maintain consistent chat container height */
 }
-/* Chat message styles */
+
 .chat-message {
     display: flex;
-    margin-bottom: 1rem;
+    margin-bottom: 0.3rem; /* Further reduced margin for smoother transitions */
     align-items: flex-start;
 }
+
 .chat-message .message-content {
-    max-width: calc(80%);
+    max-width: 80%;
     background-color: #e9e9eb;
     border-radius: 1rem;
     padding: 0.5rem 1rem;
     margin-left: 1rem;
-    display: inline-block;
 }
+
 .chat-message.user .message-content {
     background-color: #D1DACB;
     color: black;
 }
+
 .chat-message.assistant .message-content {
     background-color: #F3F7F0;
     color: black;
 }
+
 /* Avatar styles */
 .avatar {
     width: 40px;
@@ -72,16 +68,19 @@ h1 {
     font-size: 20px;
     flex-shrink: 0;
 }
+
 /* Input styles */
 .stTextInput > div > div > input {
     border-radius: 20px;
 }
+
 .stButton > button {
     border-radius: 20px;
     background-color: #D1DACB;
     color: black;
     margin-left: 20px;
 }
+
 /* File uploader styles */
 .stFileUploader {
     padding: 1rem;
@@ -90,60 +89,52 @@ h1 {
     text-align: center;
 }
 
-/* Responsive design */
-@media (max-width: 900px) {
-    .main .block-container,
-    .stChatFloatingInputContainer {
-        max-width: 90% !important;
-    }
-    .stChatFloatingInputContainer {
-        right: calc(5% - 40px) !important;
-    }
-    .chat-message .message-content {
-        max-width: calc(100%);
-    }
-}
 /* Typing indicator */
 .typing-indicator {
     display: flex;
     align-items: center;
-    margin-bottom: 10px;
+    margin-bottom: 0.5rem;
+    padding: 0.5rem 1rem;
+    background-color: #F3F7F0;
+    border-radius: 1rem;
+    max-width: 80%;
+    margin-left: 50px;
 }
-.typing-indicator .turtle {
-    font-size: 24px;
-    margin-right: 10px;
-}
-.typing-indicator .typing-text {
-    font-size: 14px;
-    color: #555;
-}
+
 .typing-indicator .dot {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
     background-color: #555;
     border-radius: 50%;
     margin-left: 3px;
     animation: typing-dot 1.5s infinite ease-in-out;
 }
+
 .typing-indicator .dot:nth-child(2) {
     animation-delay: 0.2s;
 }
+
 .typing-indicator .dot:nth-child(3) {
     animation-delay: 0.4s;
 }
+
 @keyframes typing-dot {
     0%, 60%, 100% { transform: translateY(0); }
     30% { transform: translateY(-5px); }
 }
+
+/* Remove spinning circle */
+.stSpinner {
+    display: none !important;
+}
+
 /* Center the title */
 .stApp > header {
     background-color: transparent !important;
 }
+
 .stApp > header > div > div > div > a > svg {
     display: none;
-}
-h1 {
-    text-align: center !important;
 }
 
 /* Target the bottom padding area and ensure consistent background color */
@@ -157,4 +148,33 @@ h1 {
 /* Ensure the input field maintains its original background */
 .stChatInputContainer textarea {
     background-color: white !important;
+    font-family: 'DejaVu Sans Mono', monospace !important;
+    font-size: 15px !important;
+}
+
+/* Updated styling for chat input container */
+.stChatFloatingInputContainer {
+    position: fixed !important;
+    bottom: 20px !important;
+    left: 59% !important;
+    transform: translateX(-50%) !important;
+    width: 100% !important;
+    max-width: 780px !important;
+    background-color: #E5EEDF !important;
+    padding: 10px 20px !important;
+    z-index: 1000 !important;
+    border-radius: 20px !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1) !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+}
+
+/* Adjust clear conversation button */
+#clear_button {
+    position: fixed;
+    bottom: 90px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1001;
 }
