@@ -30,7 +30,8 @@ body, .stApp, .main {
     margin-left: auto !important;
     margin-right: auto !important;
     padding-top: 2rem !important;
-    padding-bottom: 2rem !important;
+    padding-bottom: 50px !important; /* Add extra padding to the bottom */
+    position: relative;
 }
 
 /* Chat container */
@@ -87,7 +88,25 @@ body, .stApp, .main {
     border: 2px solid #ccc !important;
     font-size: 16px !important;
     width: 100% !important;
+    max-width: 500px !important; /* Make the input field wider */
     box-sizing: border-box !important;
+}
+
+/* Clear Conversation button container */
+.clear-conversation-container {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 20px; /* Space between the button and chat */
+    padding: 10px 20px;
+    position: relative;
+    z-index: 1;
+}
+
+/* Clear Conversation button styling */
+.stButton {
+    margin-left: 20px !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important; /* Reset any additional margin */
 }
 
 /* Button styling */
@@ -100,13 +119,11 @@ body, .stApp, .main {
     cursor: pointer !important;
 }
 
-/* File uploader container */
-.stFileUploader {
-    padding: 1rem !important;
-    border: 2px dashed #4267B2 !important;
-    border-radius: 10px !important;
-    text-align: center !important;
-    background-color: #ffffff !important;
+/* Padding on the chat input container to make room for the button */
+.stChatInputContainer {
+    padding-bottom: 10px !important; /* Reduce padding to make more room */
+    position: relative;
+    z-index: 10; /* Ensure it's on top of everything */
 }
 
 /* Responsive design for smaller screens */

@@ -84,7 +84,7 @@ def extract_text_from_s3(file_key: str) -> Optional[str]:
             response = textract_client.get_document_text_detection(JobId=job_id)
             if response['JobStatus'] in ['SUCCEEDED', 'FAILED']:
                 break
-            time.sleep(2)
+            time.sleep(1)
         
         if response['JobStatus'] == 'SUCCEEDED':
             return '\n'.join(item['Text'] for item in response['Blocks'] if item['BlockType'] == 'LINE')
