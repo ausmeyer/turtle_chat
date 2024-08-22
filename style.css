@@ -44,7 +44,7 @@ body, .stApp, .main {
     color: black;
 }
 
-/* Avatar styles */
+/* Updated Avatar styles */
 .avatar {
     width: 40px;
     height: 40px;
@@ -55,6 +55,14 @@ body, .stApp, .main {
     font-size: 20px;
     flex-shrink: 0;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.chat-message.user .avatar {
+    background-color: #D1DACB;
+}
+
+.chat-message.assistant .avatar {
+    background-color: #F3F7F0;
 }
 
 /* File uploader styles */
