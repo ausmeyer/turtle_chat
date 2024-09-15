@@ -47,7 +47,7 @@ def check_password() -> bool:
         subcol1, subcol2, subcol3 = st.columns([1,2,1])
         with subcol2:
             st.text_input("Password", type="password", on_change=password_entered, key="password")
-            if "password_correct" in st.session_state:
+            if "password_correct" in st.session_state and not st.session_state["password_correct"]:
                 st.error("😕 Password incorrect")
     return False
 
@@ -117,8 +117,6 @@ def process_uploaded_file(uploaded_file) -> None:
 def display_typing_indicator():
     st.markdown("""
     <div class="typing-indicator">
-        <span class="turtle">🐢</span>
-        <span class="typing-text">Turtle is typing</span>
         <span class="dot"></span>
         <span class="dot"></span>
         <span class="dot"></span>
@@ -162,9 +160,9 @@ def display_chat_interface(model: ConversationChain) -> None:
     with chat_container:
         for message in st.session_state.messages:
             display_chat_message(message["role"], message["content"])
-        
-        # Add a placeholder for the typing indicator
-        typing_indicator = st.empty()
+    
+    # Add a placeholder for the typing indicator **after** the chat messages
+    typing_indicator = st.empty()
 
     if prompt := st.chat_input("Enter text"):
         st.session_state.messages.append({"role": "user", "content": prompt})
@@ -192,7 +190,7 @@ def display_clear_button() -> None:
         st.session_state.file_key = ""
         st.session_state.uploaded_file = None
         st.session_state.file_uploader_key += 1
-        st.rerun()
+        st.experimental_rerun()  # Use st.experimental_rerun instead of st.rerun
 
 def main():
     st.set_page_config(page_title="🐢 Turtle Chat 🐢", layout="wide")
