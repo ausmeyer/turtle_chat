@@ -190,7 +190,8 @@ def display_clear_button() -> None:
         st.session_state.file_key = ""
         st.session_state.uploaded_file = None
         st.session_state.file_uploader_key += 1
-        st.experimental_rerun()  # Use st.experimental_rerun instead of st.rerun
+        #st.experimental_rerun()  # Use st.experimental_rerun instead of st.rerun
+        st.rerun()
 
 def main():
     st.set_page_config(page_title="🐢 Turtle Chat 🐢", layout="wide")
