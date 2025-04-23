@@ -15,7 +15,7 @@ from langchain.memory import ConversationBufferMemory
 # Constants
 S3_BUCKET_NAME = 'chatdshs'
 AWS_REGION = 'us-west-2'
-MODEL_ID = "anthropic.claude-3-5-sonnet-20240620-v1:0"
+MODEL_ID = "anthropic.claude-3-5-sonnet-20241022-v2:0"
 ALLOWED_FILE_TYPES = ["pdf", "png"]
 
 # AWS Configuration
