@@ -48,16 +48,44 @@ def load_css():
             css_content = f.read()
             st.markdown(f'<style>{css_content}</style>', unsafe_allow_html=True)
             
-            # Force CSS to apply by adding it to the page head for Streamlit Cloud
-            # Escape backticks outside of f-string
+            # Force CSS to apply and add container width enforcement for Streamlit Cloud
             escaped_css = css_content.replace('`', '\\`')
             st.markdown(f"""
             <script>
             setTimeout(function() {{
+                // Add CSS to head
                 var style = document.createElement('style');
                 style.type = 'text/css';
                 style.innerHTML = `{escaped_css}`;
                 document.head.appendChild(style);
+                
+                // Force container width enforcement
+                function enforceContainerWidth() {{
+                    // Target main container
+                    var containers = document.querySelectorAll('.main .block-container, [data-testid="block-container"]');
+                    containers.forEach(function(container) {{
+                        container.style.maxWidth = '800px';
+                        container.style.width = '100%';
+                        container.style.marginLeft = 'auto';
+                        container.style.marginRight = 'auto';
+                    }});
+                    
+                    // Target chat containers
+                    var chatContainers = document.querySelectorAll('.chat-container');
+                    chatContainers.forEach(function(container) {{
+                        container.style.maxWidth = '800px';
+                        container.style.width = '100%';
+                        container.style.marginLeft = 'auto';
+                        container.style.marginRight = 'auto';
+                    }});
+                }}
+                
+                // Run immediately and on window resize
+                enforceContainerWidth();
+                window.addEventListener('resize', enforceContainerWidth);
+                
+                // Also run when Streamlit updates the DOM
+                setInterval(enforceContainerWidth, 500);
             }}, 100);
             </script>
             """, unsafe_allow_html=True)

@@ -14,20 +14,27 @@ body, .stApp, .main {
     background-color: #F3F7F0 !important;
 }
 
-/* Main container styles - matches text input responsiveness */
-.stApp .main .block-container {
-    max-width: min(800px, calc(100vw - 2rem)) !important;
+/* Force container width to match text input - multiple targeting approaches */
+.stApp .main .block-container,
+[data-testid="stAppViewContainer"] .main .block-container,
+.main .block-container,
+div[data-testid="block-container"],
+section[data-testid="stSidebar"] + div .main .block-container {
+    max-width: 800px !important;
     margin: 0 auto !important;
     padding-left: 1rem !important;
     padding-right: 1rem !important;
-    width: 100% !important;
+    width: calc(100% - 2rem) !important;
 }
 
-/* Additional targeting for Streamlit Cloud */
-[data-testid="stAppViewContainer"] .main .block-container {
-    max-width: min(800px, calc(100vw - 2rem)) !important;
-    margin: 0 auto !important;
-    width: 100% !important;
+/* Streamlit Cloud specific override */
+@media screen {
+    .stApp .main .block-container {
+        max-width: 800px !important;
+        width: calc(100% - 2rem) !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+    }
 }
 
 .chat-message {
@@ -174,16 +181,27 @@ body, .stApp, .main {
     margin-top: 1.5rem !important;
 }
 
-/* Chat container centering - dynamically matches text input width */
+/* Chat container centering - force width to match text input */
 .stApp .chat-container,
 [data-testid="stAppViewContainer"] .chat-container,
-div.chat-container {
-    max-width: min(800px, calc(100vw - 2rem)) !important;
+div.chat-container,
+.chat-container {
+    max-width: 800px !important;
     margin: 0 auto !important;
     padding: 1rem !important;
     margin-bottom: 2rem !important;
-    width: calc(100% - 2rem) !important;
+    width: 100% !important;
     box-sizing: border-box !important;
+}
+
+/* Additional override for Streamlit Cloud */
+@media screen {
+    .chat-container {
+        max-width: 800px !important;
+        width: 100% !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+    }
 }
 
 /* Button centering */
