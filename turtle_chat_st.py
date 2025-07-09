@@ -43,8 +43,26 @@ logging.basicConfig(
 audit_logger = logging.getLogger('audit')
 
 def load_css():
-    with open("style.css") as f:
-        st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+    try:
+        with open("style.css") as f:
+            css_content = f.read()
+            st.markdown(f'<style>{css_content}</style>', unsafe_allow_html=True)
+            
+            # Force CSS to apply by adding it to the page head for Streamlit Cloud
+            # Escape backticks outside of f-string
+            escaped_css = css_content.replace('`', '\\`')
+            st.markdown(f"""
+            <script>
+            setTimeout(function() {{
+                var style = document.createElement('style');
+                style.type = 'text/css';
+                style.innerHTML = `{escaped_css}`;
+                document.head.appendChild(style);
+            }}, 100);
+            </script>
+            """, unsafe_allow_html=True)
+    except FileNotFoundError:
+        st.error("CSS file not found. Using default styling.")
 
 def check_session_timeout() -> bool:
     """Check if session has timed out due to inactivity"""

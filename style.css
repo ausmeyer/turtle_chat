@@ -15,11 +15,18 @@ body, .stApp, .main {
 }
 
 /* Main container styles - matches text input responsiveness */
-.main .block-container {
+.stApp .main .block-container {
     max-width: min(800px, calc(100vw - 2rem)) !important;
     margin: 0 auto !important;
     padding-left: 1rem !important;
     padding-right: 1rem !important;
+    width: 100% !important;
+}
+
+/* Additional targeting for Streamlit Cloud */
+[data-testid="stAppViewContainer"] .main .block-container {
+    max-width: min(800px, calc(100vw - 2rem)) !important;
+    margin: 0 auto !important;
     width: 100% !important;
 }
 
@@ -168,7 +175,9 @@ body, .stApp, .main {
 }
 
 /* Chat container centering - dynamically matches text input width */
-.chat-container {
+.stApp .chat-container,
+[data-testid="stAppViewContainer"] .chat-container,
+div.chat-container {
     max-width: min(800px, calc(100vw - 2rem)) !important;
     margin: 0 auto !important;
     padding: 1rem !important;
