@@ -14,9 +14,9 @@ body, .stApp, .main {
     background-color: #F3F7F0 !important;
 }
 
-/* Main container styles */
+/* Main container styles - matches text input responsiveness */
 .main .block-container {
-    max-width: 800px !important;
+    max-width: min(800px, calc(100vw - 2rem)) !important;
     margin: 0 auto !important;
     padding-left: 1rem !important;
     padding-right: 1rem !important;
@@ -167,13 +167,13 @@ body, .stApp, .main {
     margin-top: 1.5rem !important;
 }
 
-/* Chat container centering - aligned with text input */
+/* Chat container centering - dynamically matches text input width */
 .chat-container {
-    max-width: 800px !important;
+    max-width: min(800px, calc(100vw - 2rem)) !important;
     margin: 0 auto !important;
     padding: 1rem !important;
     margin-bottom: 2rem !important;
-    width: 100% !important;
+    width: calc(100% - 2rem) !important;
     box-sizing: border-box !important;
 }
 
