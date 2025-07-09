@@ -133,9 +133,10 @@ body, .stApp, .main {
 
 /* Chat input container - responsive centering */
 .stChatInput {
-    margin: 0 auto !important;
+    margin: 1.5rem auto !important;
     max-width: 800px !important;
     width: 100% !important;
+    margin-top: 1.5rem !important;
 }
 
 /* Chat container centering */
@@ -143,6 +144,7 @@ body, .stApp, .main {
     max-width: 800px !important;
     margin: 0 auto !important;
     padding: 1rem !important;
+    margin-bottom: 2rem !important;
 }
 
 /* Button centering */
