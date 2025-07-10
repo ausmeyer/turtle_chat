@@ -7,6 +7,7 @@ import json
 import logging
 import hashlib
 import requests
+import base64
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 from cryptography.fernet import Fernet
@@ -19,7 +20,7 @@ from botocore.exceptions import ClientError
 S3_BUCKET_NAME = 'chatdshs'
 AWS_REGION = 'us-west-2'
 CLAUDE_MODEL_ID = "us.anthropic.claude-sonnet-4-20250514-v1:0"
-ALLOWED_FILE_TYPES = ["pdf", "png"]
+ALLOWED_FILE_TYPES = ["pdf", "png", "jpg", "jpeg", "gif", "webp"]
 SESSION_TIMEOUT_MINUTES = 30  # Auto-logout after 30 minutes of inactivity
 
 # Model configurations
@@ -178,7 +179,7 @@ def check_password() -> bool:
 def load_llm():
     return bedrock_runtime
 
-def get_xai_response(prompt: str, model_config: dict, conversation_history: List[Dict] = None) -> str:
+def get_xai_response(prompt: str, model_config: dict, conversation_history: List[Dict] = None, image_data: dict = None) -> str:
     """Get response from xAI API"""
     try:
         # Get xAI API key from secrets
@@ -195,11 +196,30 @@ def get_xai_response(prompt: str, model_config: dict, conversation_history: List
                     "content": msg["content"]
                 })
         
-        # Add current user message
-        messages.append({
-            "role": "user",
-            "content": prompt
-        })
+        # Add current user message with optional image
+        if image_data:
+            # For multimodal input with image
+            messages.append({
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": prompt
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:{image_data['mime_type']};base64,{image_data['base64']}"
+                        }
+                    }
+                ]
+            })
+        else:
+            # Text-only message
+            messages.append({
+                "role": "user", 
+                "content": prompt
+            })
         
         # Prepare request payload
         payload = {
@@ -318,16 +338,38 @@ def delete_from_s3(file_key: str) -> None:
 
 def process_uploaded_file(uploaded_file) -> None:
     with st.spinner("Processing uploaded file..."):
-        file_key = upload_to_s3(uploaded_file)
-        if file_key:
-            st.session_state.file_key = file_key
-            st.session_state.file_content = extract_text_from_s3(file_key)
-            if st.session_state.file_content:
-                st.success("File content has been extracted and is ready for use.")
-            else:
-                st.error("Failed to extract content from the file.")
+        file_name = uploaded_file.name
+        file_content = uploaded_file.read()
+        
+        if is_image_file(file_name):
+            # Handle image files directly
+            file_type = file_name.split('.')[-1].lower()
+            mime_type = get_mime_type(file_type)
+            base64_data = encode_image_to_base64(file_content, file_type)
+            
+            st.session_state.file_data = {
+                "is_image": True,
+                "base64": base64_data,
+                "mime_type": mime_type,
+                "filename": file_name
+            }
+            st.session_state.file_content = None
+            st.success(f"Image '{file_name}' has been uploaded and is ready for analysis.")
+            
         else:
-            st.error("Failed to upload the file.")
+            # Handle PDF files with existing S3/Textract pipeline
+            uploaded_file.seek(0)  # Reset file pointer
+            file_key = upload_to_s3(uploaded_file)
+            if file_key:
+                st.session_state.file_key = file_key
+                st.session_state.file_content = extract_text_from_s3(file_key)
+                st.session_state.file_data = None
+                if st.session_state.file_content:
+                    st.success("PDF content has been extracted and is ready for use.")
+                else:
+                    st.error("Failed to extract content from the PDF.")
+            else:
+                st.error("Failed to upload the PDF.")
 
 def display_typing_indicator():
     st.markdown("""
@@ -370,15 +412,46 @@ def decrypt_file_content(encrypted_content: bytes) -> bytes:
     fernet = Fernet(get_encryption_key())
     return fernet.decrypt(encrypted_content)
 
-def get_ai_response(model, prompt: str, file_content: Optional[str], conversation_history: List[Dict] = None, selected_model: str = "claude-sonnet-4") -> str:
+def encode_image_to_base64(file_content: bytes, file_type: str) -> str:
+    """Convert image file to base64 string"""
+    return base64.b64encode(file_content).decode('utf-8')
+
+def get_mime_type(file_type: str) -> str:
+    """Get MIME type from file extension"""
+    mime_types = {
+        "png": "image/png",
+        "jpg": "image/jpeg", 
+        "jpeg": "image/jpeg",
+        "gif": "image/gif",
+        "webp": "image/webp",
+        "pdf": "application/pdf"
+    }
+    return mime_types.get(file_type.lower(), "application/octet-stream")
+
+def is_image_file(filename: str) -> bool:
+    """Check if file is an image"""
+    image_extensions = ["png", "jpg", "jpeg", "gif", "webp"]
+    file_ext = filename.split('.')[-1].lower()
+    return file_ext in image_extensions
+
+def get_ai_response(model, prompt: str, file_content: Optional[str], conversation_history: List[Dict] = None, selected_model: str = "claude-sonnet-4", file_data: dict = None) -> str:
     # Get model configuration
     model_config = MODEL_CONFIGS.get(selected_model, MODEL_CONFIGS["claude-sonnet-4"])
     
     # Route to appropriate service
     if model_config["service"] == "xai":
         # For xAI models, use direct API call
-        if file_content:
-            # Include file content in the prompt for xAI
+        image_data = None
+        
+        if file_data and file_data.get("is_image"):
+            # Handle image files directly
+            image_data = {
+                "base64": file_data["base64"],
+                "mime_type": file_data["mime_type"]
+            }
+            full_prompt = prompt
+        elif file_content:
+            # Include text file content in the prompt
             full_prompt = f"""Here is the content of an uploaded file:
 
 {file_content}
@@ -394,10 +467,11 @@ User's question: {prompt}"""
             "model": selected_model,
             "service": "xai",
             "has_file_content": bool(file_content),
+            "has_image": bool(image_data),
             "conversation_history_length": len(conversation_history) if conversation_history else 0
         })
         
-        response = get_xai_response(full_prompt, model_config, conversation_history)
+        response = get_xai_response(full_prompt, model_config, conversation_history, image_data)
         
         # Log the response for audit
         log_audit_event("response", user_id, {
@@ -622,7 +696,7 @@ def display_chat_interface(model) -> None:
         with st.spinner(text=''):
             # Get conversation history excluding the current prompt
             conversation_history = st.session_state.messages[:-1] if len(st.session_state.messages) > 1 else []
-            result = get_ai_response(model, prompt, st.session_state.file_content, conversation_history, selected_model)
+            result = get_ai_response(model, prompt, st.session_state.file_content, conversation_history, selected_model, st.session_state.get("file_data"))
 
         typing_indicator.empty()
 
@@ -898,6 +972,7 @@ def display_clear_button() -> None:
             st.session_state.messages = [{"role": "assistant", "content": "How can I help?"}]
             st.session_state.file_content = ""
             st.session_state.file_key = ""
+            st.session_state.file_data = None
             st.session_state.uploaded_file = None
             st.session_state.file_uploader_key += 1
             st.rerun()
@@ -929,6 +1004,8 @@ def main():
         st.session_state.conversation_tags = []
     if "selected_model" not in st.session_state:
         st.session_state.selected_model = "claude-sonnet-4"
+    if "file_data" not in st.session_state:
+        st.session_state.file_data = None
 
     model = load_llm()
     
@@ -1161,8 +1238,11 @@ def main():
                     st.rerun()
 
     # Handle file upload for supported models
-    if uploaded_file and not st.session_state.file_key and model_config["supports_file_upload"]:
-        process_uploaded_file(uploaded_file)
+    if uploaded_file and model_config["supports_file_upload"]:
+        # Check if this is a new file
+        if (not st.session_state.file_key and not st.session_state.file_data) or \
+           (st.session_state.file_data and st.session_state.file_data.get("filename") != uploaded_file.name):
+            process_uploaded_file(uploaded_file)
     
     chat_container = st.container()
     with chat_container:
