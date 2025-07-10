@@ -40,7 +40,7 @@ MODEL_CONFIGS = {
         "model_id": "grok-4",
         "supports_extended_thinking": False,
         "supports_citations": True,
-        "supports_file_upload": False,
+        "supports_file_upload": True,
         "max_tokens": 131072,
         "context_window": 256000
     }
