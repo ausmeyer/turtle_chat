@@ -31,7 +31,8 @@ MODEL_CONFIGS = {
         "supports_extended_thinking": True,
         "supports_citations": True,
         "supports_file_upload": True,
-        "max_tokens": 64000
+        "max_tokens": 64000,
+        "context_window": 200000
     },
     "grok-4": {
         "name": "Grok 4",
@@ -40,7 +41,8 @@ MODEL_CONFIGS = {
         "supports_extended_thinking": False,
         "supports_citations": True,
         "supports_file_upload": False,
-        "max_tokens": 32768
+        "max_tokens": 131072,
+        "context_window": 256000
     }
 }
 
@@ -957,7 +959,10 @@ def main():
         
         # Display model info
         model_config = MODEL_CONFIGS[selected_model]
-        st.info(f"**Service:** {model_config['service'].upper()}\n\n**Max Tokens:** {model_config['max_tokens']:,}")
+        info_text = f"**Service:** {model_config['service'].upper()}"
+        if 'context_window' in model_config:
+            info_text += f"\n\n**Context Window:** {model_config['context_window']:,} tokens"
+        st.info(info_text)
         
         st.divider()
         
