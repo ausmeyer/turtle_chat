@@ -11,6 +11,8 @@ import base64
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 from cryptography.fernet import Fernet
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 import boto3
 import streamlit as st
@@ -180,7 +182,7 @@ def load_llm():
     return bedrock_runtime
 
 def get_xai_response(prompt: str, model_config: dict, conversation_history: List[Dict] = None, image_data: dict = None) -> str:
-    """Get response from xAI API"""
+    """Get response from xAI API with retry logic for Streamlit Cloud"""
     try:
         # Get xAI API key from secrets
         xai_api_key = st.secrets["xai_credentials"]["api_key"]
@@ -230,18 +232,37 @@ def get_xai_response(prompt: str, model_config: dict, conversation_history: List
             "top_p": 0.9
         }
         
-        # Make API request
+        # Create session with retry strategy
+        session = requests.Session()
+        
+        # Configure retry strategy
+        retry_strategy = Retry(
+            total=3,
+            backoff_factor=2,
+            status_forcelist=[429, 500, 502, 503, 504],
+            allowed_methods=["POST"]
+        )
+        
+        adapter = HTTPAdapter(max_retries=retry_strategy)
+        session.mount("https://", adapter)
+        
+        # Make API request with increased timeout and retry logic
         headers = {
             "Authorization": f"Bearer {xai_api_key}",
             "Content-Type": "application/json"
         }
         
-        response = requests.post(
-            "https://api.x.ai/v1/chat/completions",
-            headers=headers,
-            json=payload,
-            timeout=60
-        )
+        # Detect if running on Streamlit Cloud (longer timeout needed)
+        is_cloud = os.environ.get("STREAMLIT_CLOUD") or "streamlit.app" in os.environ.get("SERVER_NAME", "")
+        timeout = 180 if is_cloud else 60  # 3 minutes for cloud, 1 minute for local
+        
+        with st.spinner("Connecting to Grok 4..."):
+            response = session.post(
+                "https://api.x.ai/v1/chat/completions",
+                headers=headers,
+                json=payload,
+                timeout=timeout
+            )
         
         if response.status_code == 200:
             result = response.json()
@@ -254,9 +275,15 @@ def get_xai_response(prompt: str, model_config: dict, conversation_history: List
     except KeyError:
         st.error("xAI API key not found in secrets. Please add your xAI API key to secrets.")
         return "xAI API key not configured."
+    except requests.exceptions.Timeout:
+        st.error("Request timed out. This can happen on Streamlit Cloud due to network conditions. Please try again.")
+        return "Sorry, the request timed out. Please try again in a moment."
+    except requests.exceptions.ConnectionError:
+        st.error("Connection error. Please check your internet connection and try again.")
+        return "Sorry, I couldn't connect to the xAI service. Please try again."
     except requests.exceptions.RequestException as e:
-        st.error(f"Request error: {e}")
-        return "Sorry, I encountered a network error."
+        st.error(f"Network error: {str(e)}")
+        return "Sorry, I encountered a network error. Please try again."
     except Exception as e:
         st.error(f"Unexpected error: {e}")
         return "Sorry, I encountered an unexpected error."
