@@ -109,12 +109,19 @@ def check_session_timeout() -> bool:
 
 def check_password() -> bool:
     def password_entered():
-        if hmac.compare_digest(st.session_state["password"], st.secrets["password"]):
-            st.session_state["password_correct"] = True
-            st.session_state["last_activity"] = datetime.now()
-            st.session_state["session_timed_out"] = False
-            del st.session_state["password"]
-        else:
+        try:
+            # Convert both to bytes for secure comparison
+            entered_password = st.session_state["password"].encode('utf-8')
+            stored_password = st.secrets["password"].encode('utf-8')
+            
+            if hmac.compare_digest(entered_password, stored_password):
+                st.session_state["password_correct"] = True
+                st.session_state["last_activity"] = datetime.now()
+                st.session_state["session_timed_out"] = False
+                del st.session_state["password"]
+            else:
+                st.session_state["password_correct"] = False
+        except (AttributeError, KeyError, UnicodeEncodeError):
             st.session_state["password_correct"] = False
 
     # Check for session timeout
@@ -269,7 +276,7 @@ def decrypt_file_content(encrypted_content: bytes) -> bytes:
     fernet = Fernet(get_encryption_key())
     return fernet.decrypt(encrypted_content)
 
-def get_ai_response(model, prompt: str, file_content: Optional[str]) -> str:
+def get_ai_response(model, prompt: str, file_content: Optional[str], conversation_history: List[Dict] = None) -> str:
     base_system_prompt = '''<claude_info> The assistant is Claude, created by Anthropic. Claude's knowledge base was last updated on April 2024. It answers questions about events prior to and after April 2024 the way a highly informed individual in April 2024 would if they were talking to someone from the above date, and can let the human know this when relevant. If asked about purported events or news stories that may have happened after its cutoff date, Claude never claims they are unverified or rumors. It just informs the human about its cutoff date. Claude cannot open URLs, links, or videos. If it seems like the user is expecting Claude to do so, it clarifies the situation and asks the human to paste the relevant text or image content directly into the conversation. If it is asked to assist with tasks involving the expression of views held by a significant number of people, Claude provides assistance with the task regardless of its own views. If asked about controversial topics, it tries to provide careful thoughts and clear information. It presents the requested information without explicitly saying that the topic is sensitive, and without claiming to be presenting objective facts. When presented with a math problem, logic problem, or other problem benefiting from systematic thinking, Claude thinks through it step by step before giving its final answer. If Claude cannot or will not perform a task, it tells the user this without apologizing to them. It avoids starting its responses with “I’m sorry” or “I apologize”. If Claude is asked about a very obscure person, object, or topic, i.e. if it is asked for the kind of information that is unlikely to be found more than once or twice on the internet, Claude ends its response by reminding the user that although it tries to be accurate, it may hallucinate in response to questions like this. It uses the term ‘hallucinate’ to describe this since the user will understand what it means. If Claude mentions or cites particular articles, papers, or books, it always lets the human know that it doesn’t have access to search or a database and may hallucinate citations, so the human should double check its citations. Claude is very smart and intellectually curious. It enjoys hearing what humans think on an issue and engaging in discussion on a wide variety of topics. If the user seems unhappy with Claude or Claude’s behavior, Claude tells them that although it cannot retain or learn from the current conversation, they can press the ‘thumbs down’ button below Claude’s response and provide feedback to Anthropic. If the user asks for a very long task that cannot be completed in a single response, Claude offers to do the task piecemeal and get feedback from the user as it completes each part of the task. Claude uses markdown for code. Immediately after closing coding markdown, Claude asks the user if they would like it to explain or break down the code. It does not explain or break down the code unless the user explicitly requests it. </claude_info>
                         <claude_4_family_info> This iteration of Claude is part of the Claude 4 model family, which was released in 2025. The Claude 4 family currently consists of Claude 4 Sonnet and Claude 4 Opus. Claude 4 Sonnet is optimized for high-volume use cases and can function effectively as a task-specific sub-agent within broader AI systems. Claude 4 Opus excels at complex reasoning and writing tasks. Both models are hybrid reasoning models offering two modes: near-instant responses and extended thinking for deeper reasoning. The version of Claude in this chat is Claude 4 Sonnet. Claude can provide the information in these tags if asked but it does not know any other details of the Claude 4 model family. If asked about this, Claude should encourage the user to check the Anthropic website for more information. </claude_4_family_info>
                         Claude provides thorough responses to more complex and open-ended questions or to anything where a long response is requested, but concise responses to simpler questions and tasks. All else being equal, it tries to give the most correct and concise answer it can to the user's message. Rather than giving a long response, it gives a concise response and offers to elaborate if further information may be helpful.
@@ -294,18 +301,31 @@ def get_ai_response(model, prompt: str, file_content: Optional[str]) -> str:
         </citation_instructions>'''
     
     system_prompt = base_system_prompt + citation_prompt
+    
+    # Build conversation messages with history
+    messages = []
+    
+    # Add conversation history if provided
+    if conversation_history:
+        for msg in conversation_history:
+            if msg["role"] == "user":
+                messages.append({"role": "user", "content": msg["content"]})
+            elif msg["role"] == "assistant":
+                # Only add the main content, not thinking content for API
+                messages.append({"role": "assistant", "content": msg["content"]})
+    
+    # Add file content context if provided
     if file_content:
-        user_message = f'''Here is the content of an uploaded file:
+        current_message = f'''Here is the content of an uploaded file:
 
 {file_content}
 
 User's question: {prompt}'''
     else:
-        user_message = prompt
-
-    messages = [
-        {"role": "user", "content": user_message}
-    ]
+        current_message = prompt
+    
+    # Add current user message
+    messages.append({"role": "user", "content": current_message})
 
     # Build the request body
     request_body = {
@@ -334,7 +354,9 @@ User's question: {prompt}'''
     log_audit_event("query", user_id, {
         "prompt": prompt[:200] + "..." if len(prompt) > 200 else prompt,
         "has_file_content": bool(file_content),
-        "extended_thinking": st.session_state.get("extended_thinking", False)
+        "extended_thinking": st.session_state.get("extended_thinking", False),
+        "conversation_history_length": len(conversation_history) if conversation_history else 0,
+        "total_messages_sent": len(messages)
     })
     
     try:
@@ -429,6 +451,20 @@ def display_chat_message(role: str, content, thinking_content=None):
             <div class="message-content">{content}</div>
         </div>
         """, unsafe_allow_html=True)
+        
+        # Add copy functionality for Claude responses using Streamlit's native components
+        if role == "assistant":
+            # Create a centered expander with the raw text
+            col1, col2, col3 = st.columns([1, 3, 1])
+            with col2:
+                with st.expander("📋 Copy Text", expanded=False):
+                    st.text_area(
+                        "Select all and copy:",
+                        value=content,
+                        height=120,
+                        key=f"raw_text_{hashlib.md5(content.encode()).hexdigest()[:8]}",
+                        help="Select all (Ctrl+A/Cmd+A) and copy (Ctrl+C/Cmd+C)"
+                    )
 
 def display_chat_interface(model) -> None:
     chat_container = st.container()
@@ -449,7 +485,9 @@ def display_chat_interface(model) -> None:
             display_typing_indicator()
 
         with st.spinner(text=''):
-            result = get_ai_response(model, prompt, st.session_state.file_content)
+            # Get conversation history excluding the current prompt
+            conversation_history = st.session_state.messages[:-1] if len(st.session_state.messages) > 1 else []
+            result = get_ai_response(model, prompt, st.session_state.file_content, conversation_history)
 
         typing_indicator.empty()
 
@@ -717,9 +755,9 @@ def delete_all_conversations():
     st.rerun()
 
 def display_clear_button() -> None:
-    col1, col2, col3 = st.columns([1, 1, 1])
+    col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        if st.button("🗑️ Clear Conversation", key="clear_button"):
+        if st.button("🗑️ Clear Conversation", key="clear_button", use_container_width=True, type="secondary"):
             if st.session_state.file_key:
                 delete_from_s3(st.session_state.file_key)
             st.session_state.messages = [{"role": "assistant", "content": "How can I help?"}]
@@ -727,7 +765,6 @@ def display_clear_button() -> None:
             st.session_state.file_key = ""
             st.session_state.uploaded_file = None
             st.session_state.file_uploader_key += 1
-            #st.experimental_rerun()  # Use st.experimental_rerun instead of st.rerun
             st.rerun()
 
 def main():
@@ -759,28 +796,34 @@ def main():
     model = load_llm()
     
     with st.sidebar:
+        # File Upload Section
+        st.markdown("### 📎 Document Upload")
         uploaded_file = st.file_uploader(
-            "📎 Upload a document",
+            "Upload a document",
             type=ALLOWED_FILE_TYPES,
-            key=f"file_uploader_{st.session_state.file_uploader_key}"
+            key=f"file_uploader_{st.session_state.file_uploader_key}",
+            help="Upload PDF or PNG files for analysis"
         )
         
         st.divider()
         
+        # AI Settings Section
+        st.markdown("### ⚙️ AI Settings")
+        
         # Extended thinking mode toggle
         extended_thinking = st.checkbox(
-            "🧠 Extended Thinking Mode",
-            help="Enable Claude's step-by-step reasoning for complex tasks. Uses additional tokens for internal thinking."
+            "🧠 Extended Thinking",
+            help="Enable step-by-step reasoning for complex tasks"
         )
         
         if extended_thinking:
             thinking_budget = st.slider(
-                "Thinking Budget (tokens)",
+                "Thinking Budget",
                 min_value=1024,
                 max_value=10000,
                 value=4000,
                 step=512,
-                help="Maximum tokens Claude can use for internal reasoning"
+                help="Maximum tokens for internal reasoning"
             )
             st.session_state.extended_thinking = True
             st.session_state.thinking_budget = thinking_budget
@@ -790,111 +833,126 @@ def main():
         # Citation requests toggle
         citation_mode = st.checkbox(
             "📚 Request Citations",
-            help="Ask Claude to provide sources and citations when possible for medical information."
+            help="Ask for sources and citations when possible"
         )
         st.session_state.citation_mode = citation_mode
         
         st.divider()
         
-        # Export conversation
-        if st.button("📄 Export Conversation"):
-            export_conversation()
+        # Current Session Section
+        st.markdown("### 💬 Current Session")
         
         # Conversation tagging
-        st.subheader("🏷️ Conversation Tags")
-        current_tags = st.session_state.get("conversation_tags", [])
-        
-        # Tag input
-        new_tag = st.text_input("Add tag:", placeholder="e.g., cardiology, oncology")
-        if st.button("Add Tag") and new_tag:
-            if new_tag not in current_tags:
-                current_tags.append(new_tag)
-                st.session_state.conversation_tags = current_tags
-                st.success(f"Added tag: {new_tag}")
-        
-        # Display current tags
-        if current_tags:
-            st.write("Current tags:")
-            for tag in current_tags:
-                col1, col2 = st.columns([3, 1])
-                with col1:
-                    st.write(f"• {tag}")
-                with col2:
-                    if st.button("❌", key=f"remove_{tag}"):
-                        current_tags.remove(tag)
-                        st.session_state.conversation_tags = current_tags
-                        st.rerun()
-        
-        # Save conversation
-        if st.button("💾 Save Conversation"):
-            save_conversation()
-        
-        # Browse all conversations
-        st.subheader("📚 Browse Conversations")
-        conversations = get_all_conversations()
-        
-        if conversations:
-            # Create dropdown options
-            conversation_options = ["Select a conversation..."] + [
-                f"{conv['timestamp'][:19]} - {', '.join(conv.get('tags', ['No tags']))} ({len(conv['messages'])} msgs)"
-                for conv in conversations
-            ]
+        with st.expander("🏷️ Add Tags", expanded=False):
+            current_tags = st.session_state.get("conversation_tags", [])
             
-            selected_index = st.selectbox(
-                "Select conversation:",
-                range(len(conversation_options)),
-                format_func=lambda x: conversation_options[x]
+            # Tag input
+            new_tag = st.text_input(
+                "Add tag:", 
+                placeholder="e.g., cardiology, oncology",
+                key="new_tag_input"
             )
             
-            if selected_index > 0:  # If not the default "Select..." option
-                selected_conv = conversations[selected_index - 1]
-                
-                # Show conversation preview
-                with st.expander("Preview", expanded=True):
-                    st.write(f"**ID:** {selected_conv['id'][:8]}...")
-                    st.write(f"**Created:** {selected_conv['timestamp'][:19]}")
-                    st.write(f"**Tags:** {', '.join(selected_conv.get('tags', ['No tags']))}")
-                    st.write(f"**Messages:** {len(selected_conv['messages'])}")
-                    
-                    # Show first few messages
-                    for i, msg in enumerate(selected_conv['messages'][:3]):
-                        role = "👤 User" if msg['role'] == 'user' else "🐢 Claude"
-                        content = msg['content'][:100] + "..." if len(msg['content']) > 100 else msg['content']
-                        st.write(f"**{role}:** {content}")
-                
-                # Action buttons
-                col1, col2 = st.columns(2)
-                with col1:
-                    if st.button("📂 Load Conversation", key=f"load_selected_{selected_conv['id']}"):
-                        load_conversation(selected_conv['id'])
-                with col2:
-                    if st.button("🗑️ Delete", key=f"delete_selected_{selected_conv['id']}"):
-                        delete_conversation(selected_conv['id'])
-        else:
-            st.info("No saved conversations found.")
+            col1, col2 = st.columns([2, 1])
+            with col1:
+                if st.button("Add Tag", use_container_width=True) and new_tag:
+                    if new_tag not in current_tags:
+                        current_tags.append(new_tag)
+                        st.session_state.conversation_tags = current_tags
+                        st.success(f"Added: {new_tag}")
+            
+            # Display current tags
+            if current_tags:
+                st.markdown("**Current tags:**")
+                for tag in current_tags:
+                    col1, col2 = st.columns([4, 1])
+                    with col1:
+                        st.markdown(f"• {tag}")
+                    with col2:
+                        if st.button("✕", key=f"remove_{tag}", help=f"Remove {tag}"):
+                            current_tags.remove(tag)
+                            st.session_state.conversation_tags = current_tags
+                            st.rerun()
+        
+        # Action buttons
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("💾 Save", use_container_width=True, help="Save current conversation"):
+                save_conversation()
+        with col2:
+            if st.button("📄 Export", use_container_width=True, help="Export conversation to text file"):
+                export_conversation()
+        
+        st.divider()
+        
+        # Conversation History Section
+        st.markdown("### 📚 Conversation History")
         
         # Search conversations
-        st.subheader("🔍 Search History")
-        search_query = st.text_input("Search conversations:", placeholder="Enter keywords or tags")
-        if st.button("Search"):
-            search_conversations(search_query)
+        with st.expander("🔍 Search Conversations", expanded=False):
+            search_query = st.text_input(
+                "Search:", 
+                placeholder="Enter keywords or tags",
+                key="search_input"
+            )
+            if st.button("Search", use_container_width=True):
+                search_conversations(search_query)
         
-        # Bulk delete option
-        st.divider()
-        st.subheader("⚠️ Danger Zone")
-        if st.button("🗑️ Delete All Conversations", type="secondary"):
-            if st.session_state.get("confirm_delete_all", False):
-                delete_all_conversations()
-                st.session_state.confirm_delete_all = False
+        # Browse all conversations
+        with st.expander("📂 Browse All Conversations", expanded=False):
+            conversations = get_all_conversations()
+            
+            if conversations:
+                # Create dropdown options
+                conversation_options = ["Select a conversation..."] + [
+                    f"{conv['timestamp'][:10]} - {len(conv['messages'])} msgs"
+                    for conv in conversations
+                ]
+                
+                selected_index = st.selectbox(
+                    "Select:",
+                    range(len(conversation_options)),
+                    format_func=lambda x: conversation_options[x],
+                    key="conversation_selector"
+                )
+                
+                if selected_index > 0:  # If not the default "Select..." option
+                    selected_conv = conversations[selected_index - 1]
+                    
+                    # Show conversation preview
+                    st.markdown(f"**Created:** {selected_conv['timestamp'][:19]}")
+                    st.markdown(f"**Tags:** {', '.join(selected_conv.get('tags', ['No tags']))}")
+                    st.markdown(f"**Messages:** {len(selected_conv['messages'])}")
+                    
+                    # Action buttons
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        if st.button("📂 Load", key=f"load_selected_{selected_conv['id']}", use_container_width=True):
+                            load_conversation(selected_conv['id'])
+                    with col2:
+                        if st.button("🗑️ Delete", key=f"delete_selected_{selected_conv['id']}", use_container_width=True):
+                            delete_conversation(selected_conv['id'])
             else:
-                st.session_state.confirm_delete_all = True
-                st.warning("⚠️ Click again to confirm deletion of ALL conversations. This cannot be undone!")
+                st.info("No saved conversations found.")
         
-        # Reset confirmation if user moves away
-        if st.session_state.get("confirm_delete_all", False):
-            if st.button("Cancel"):
-                st.session_state.confirm_delete_all = False
-                st.rerun()
+        # Danger Zone Section
+        st.divider()
+        with st.expander("⚠️ Danger Zone", expanded=False):
+            st.warning("Destructive actions - use with caution!")
+            
+            if st.button("🗑️ Delete All Conversations", type="secondary", use_container_width=True):
+                if st.session_state.get("confirm_delete_all", False):
+                    delete_all_conversations()
+                    st.session_state.confirm_delete_all = False
+                else:
+                    st.session_state.confirm_delete_all = True
+                    st.error("⚠️ Click again to confirm deletion of ALL conversations!")
+            
+            # Reset confirmation if user moves away
+            if st.session_state.get("confirm_delete_all", False):
+                if st.button("Cancel", use_container_width=True):
+                    st.session_state.confirm_delete_all = False
+                    st.rerun()
 
     if uploaded_file and not st.session_state.file_key:
         process_uploaded_file(uploaded_file)
