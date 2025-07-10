@@ -938,13 +938,37 @@ def main():
         
         # Get available models based on configured credentials
         available_models = []
+        
+        # Debug information
+        debug_info = []
+        
         if bedrock_runtime is not None:
             available_models.append("claude-sonnet-4")
-        if "xai_credentials" in st.secrets and "api_key" in st.secrets["xai_credentials"]:
-            available_models.append("grok-4")
+            debug_info.append("✅ AWS Bedrock configured")
+        else:
+            debug_info.append("❌ AWS Bedrock not available")
+            
+        if "xai_credentials" in st.secrets:
+            if "api_key" in st.secrets["xai_credentials"]:
+                available_models.append("grok-4")
+                debug_info.append("✅ xAI credentials configured")
+            else:
+                debug_info.append("❌ xAI api_key missing from secrets")
+        else:
+            debug_info.append("❌ xAI credentials section missing from secrets")
+        
+        # Show debug info in an expander
+        with st.expander("🔧 Debug Info", expanded=False):
+            for info in debug_info:
+                st.write(info)
+            st.write(f"Available models: {available_models}")
         
         if not available_models:
             st.error("No AI models available. Please configure your API credentials.")
+            st.write("**Troubleshooting:**")
+            st.write("1. Check that your secrets are properly configured in Streamlit Cloud")
+            st.write("2. Ensure AWS credentials are valid for Bedrock access")
+            st.write("3. Verify xAI API key is correct and has proper permissions")
             st.stop()
         
         # Model selector
