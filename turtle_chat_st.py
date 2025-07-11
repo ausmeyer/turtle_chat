@@ -420,6 +420,10 @@ class TurtleChatApp:
         
         # Display model info
         self._display_model_info(selected_model)
+        
+        # Show warning for xAI on Streamlit Cloud
+        if (selected_model == "grok-4" and self._is_cloud_environment()):
+            st.warning("⚠️ **Streamlit Cloud Notice:** Grok 4 may experience connection issues on Streamlit Cloud due to networking restrictions. Claude Sonnet 4 is more reliable for cloud deployments.")
     
     def _get_available_models(self) -> List[str]:
         """Get list of available models based on configuration."""
@@ -1166,14 +1170,17 @@ class TurtleChatApp:
         """Make request to xAI API with retry logic."""
         session = requests.Session()
         
-        # Configure retry strategy - more aggressive for cloud environments
+        # Configure retry strategy - very aggressive for cloud environments
         if self._is_cloud_environment():
             retry_strategy = Retry(
-                total=5,  # More retries for cloud
-                backoff_factor=3,  # Longer backoff for cloud
-                status_forcelist=RETRY_STATUS_CODES + [502, 503, 504],  # Add more server errors
+                total=8,  # Even more retries for cloud
+                backoff_factor=1.5,  # Shorter backoff but more attempts
+                status_forcelist=[429, 500, 502, 503, 504, 520, 521, 522, 523, 524],
                 allowed_methods=["POST"],
-                raise_on_status=False
+                raise_on_status=False,
+                connect=3,  # Retry connection failures
+                read=3,     # Retry read failures
+                redirect=2  # Allow redirects
             )
         else:
             retry_strategy = Retry(
@@ -1196,7 +1203,12 @@ class TurtleChatApp:
         
         # Add specific headers for Streamlit Cloud compatibility
         if self._is_cloud_environment():
-            headers["User-Agent"] = "StreamlitApp/1.0"
+            headers.update({
+                "User-Agent": "StreamlitApp/1.0 (Python/requests)",
+                "Connection": "keep-alive",
+                "Accept-Encoding": "gzip, deflate",
+                "Cache-Control": "no-cache"
+            })
         
         try:
             response = session.post(
@@ -1217,7 +1229,10 @@ class TurtleChatApp:
                 )
                 
         except requests.exceptions.Timeout:
-            raise TimeoutError(f"Request timed out after {timeout} seconds. This may be due to network conditions.", timeout=timeout)
+            if self._is_cloud_environment():
+                raise TimeoutError(f"xAI request timed out after {timeout} seconds on Streamlit Cloud. Cloud networking can be unreliable for external APIs. Consider using Claude Sonnet 4 for better reliability.", timeout=timeout)
+            else:
+                raise TimeoutError(f"Request timed out after {timeout} seconds. This may be due to network conditions.", timeout=timeout)
         except requests.exceptions.ConnectionError as e:
             if self._is_cloud_environment():
                 raise NetworkError(f"Streamlit Cloud cannot connect to xAI service. This may be due to Streamlit Cloud's networking restrictions. Consider using Claude Sonnet 4 instead. Details: {str(e)}")
