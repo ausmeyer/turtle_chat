@@ -247,7 +247,11 @@ def handle_exception(exception: Exception, context: str = None) -> str:
         return f"Rate limit exceeded. Please wait {retry_after} seconds before trying again."
     
     elif isinstance(exception, NetworkError):
-        return "Network error occurred. Please check your internet connection."
+        if "Streamlit Cloud cannot connect to xAI service" in str(exception):
+            return "Streamlit Cloud cannot reach the xAI/Grok service due to networking restrictions. Please use Claude Sonnet 4 instead, which works reliably on Streamlit Cloud."
+        elif "Cannot connect to xAI service" in str(exception):
+            return "Cannot connect to Grok/xAI service. Please check your internet connection or try again later. The service may be temporarily unavailable."
+        return "Network error occurred. Please check your internet connection and try again."
     
     elif isinstance(exception, BedrockError):
         return "Error with AWS Bedrock service. Please try again later."

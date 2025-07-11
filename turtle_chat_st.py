@@ -1114,6 +1114,14 @@ class TurtleChatApp:
             else:
                 return self._get_bedrock_response(prompt, model_config)
                 
+        except (NetworkError, XAIError) as e:
+            # If xAI fails and we have Bedrock available, offer fallback
+            if (model_config["service"] == "xai" and self.bedrock_runtime is not None):
+                self.logger.warning(f"xAI failed ({e}), suggesting fallback to Claude")
+                # Don't automatically fallback, just provide better error message
+                raise XAIError(f"Grok 4 is currently unavailable ({str(e)}). You can switch to Claude Sonnet 4 in the sidebar to continue.")
+            else:
+                raise e
         except Exception as e:
             self.logger.error(f"AI response error: {e}")
             raise ModelServiceError(f"Failed to get AI response: {e}")
@@ -1158,13 +1166,22 @@ class TurtleChatApp:
         """Make request to xAI API with retry logic."""
         session = requests.Session()
         
-        # Configure retry strategy
-        retry_strategy = Retry(
-            total=MAX_RETRIES,
-            backoff_factor=RETRY_BACKOFF_FACTOR,
-            status_forcelist=RETRY_STATUS_CODES,
-            allowed_methods=["POST"]
-        )
+        # Configure retry strategy - more aggressive for cloud environments
+        if self._is_cloud_environment():
+            retry_strategy = Retry(
+                total=5,  # More retries for cloud
+                backoff_factor=3,  # Longer backoff for cloud
+                status_forcelist=RETRY_STATUS_CODES + [502, 503, 504],  # Add more server errors
+                allowed_methods=["POST"],
+                raise_on_status=False
+            )
+        else:
+            retry_strategy = Retry(
+                total=MAX_RETRIES,
+                backoff_factor=RETRY_BACKOFF_FACTOR,
+                status_forcelist=RETRY_STATUS_CODES,
+                allowed_methods=["POST"]
+            )
         
         adapter = HTTPAdapter(max_retries=retry_strategy)
         session.mount("https://", adapter)
@@ -1174,8 +1191,12 @@ class TurtleChatApp:
             "Content-Type": "application/json"
         }
         
-        # Detect timeout based on environment
+        # Detect timeout based on environment - Streamlit Cloud needs longer timeouts
         timeout = REQUEST_TIMEOUT_CLOUD if self._is_cloud_environment() else REQUEST_TIMEOUT_LOCAL
+        
+        # Add specific headers for Streamlit Cloud compatibility
+        if self._is_cloud_environment():
+            headers["User-Agent"] = "StreamlitApp/1.0"
         
         try:
             response = session.post(
@@ -1196,16 +1217,21 @@ class TurtleChatApp:
                 )
                 
         except requests.exceptions.Timeout:
-            raise TimeoutError("Request timed out", timeout=timeout)
-        except requests.exceptions.ConnectionError:
-            raise NetworkError("Connection error")
+            raise TimeoutError(f"Request timed out after {timeout} seconds. This may be due to network conditions.", timeout=timeout)
+        except requests.exceptions.ConnectionError as e:
+            if self._is_cloud_environment():
+                raise NetworkError(f"Streamlit Cloud cannot connect to xAI service. This may be due to Streamlit Cloud's networking restrictions. Consider using Claude Sonnet 4 instead. Details: {str(e)}")
+            else:
+                raise NetworkError(f"Cannot connect to xAI service. Please check your internet connection. Details: {str(e)}")
         except requests.exceptions.RequestException as e:
-            raise NetworkError(f"Network error: {e}")
+            raise NetworkError(f"Network error occurred: {str(e)}")
     
     def _is_cloud_environment(self) -> bool:
         """Check if running in cloud environment."""
         return (os.environ.get("STREAMLIT_CLOUD") or 
-                "streamlit.app" in os.environ.get("SERVER_NAME", ""))
+                "streamlit.app" in os.environ.get("SERVER_NAME", "") or
+                "share.streamlit.io" in os.environ.get("SERVER_NAME", "") or
+                os.environ.get("STREAMLIT_SHARING") == "true")
     
     def _get_bedrock_response(self, prompt: str, model_config: Dict) -> Union[str, Tuple[str, str]]:
         """Get response from AWS Bedrock."""
