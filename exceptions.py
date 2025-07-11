@@ -20,21 +20,24 @@ class AuthenticationError(TurtleChatException):
     """Authentication related errors."""
     
     def __init__(self, message: str = "Authentication failed", **kwargs):
-        super().__init__(message, error_code="AUTH_ERROR", **kwargs)
+        kwargs.setdefault("error_code", "AUTH_ERROR")
+        super().__init__(message, **kwargs)
 
 
 class SessionExpiredError(TurtleChatException):
     """Session timeout or expiration errors."""
     
     def __init__(self, message: str = "Session has expired", **kwargs):
-        super().__init__(message, error_code="SESSION_EXPIRED", **kwargs)
+        kwargs.setdefault("error_code", "SESSION_EXPIRED")
+        super().__init__(message, **kwargs)
 
 
 class FileProcessingError(TurtleChatException):
     """File upload, processing, or handling errors."""
     
     def __init__(self, message: str, file_name: str = None, **kwargs):
-        super().__init__(message, error_code="FILE_ERROR", **kwargs)
+        kwargs.setdefault("error_code", "FILE_ERROR")
+        super().__init__(message, **kwargs)
         self.file_name = file_name
         if file_name:
             self.details["file_name"] = file_name
@@ -44,7 +47,8 @@ class FileSizeError(FileProcessingError):
     """File size exceeds limits."""
     
     def __init__(self, message: str = "File size exceeds limit", file_size: int = None, **kwargs):
-        super().__init__(message, error_code="FILE_SIZE_ERROR", **kwargs)
+        kwargs.setdefault("error_code", "FILE_SIZE_ERROR")
+        super().__init__(message, **kwargs)
         if file_size:
             self.details["file_size"] = file_size
 
@@ -53,7 +57,8 @@ class UnsupportedFileTypeError(FileProcessingError):
     """Unsupported file type error."""
     
     def __init__(self, message: str = "Unsupported file type", file_type: str = None, **kwargs):
-        super().__init__(message, error_code="UNSUPPORTED_FILE_TYPE", **kwargs)
+        kwargs.setdefault("error_code", "UNSUPPORTED_FILE_TYPE")
+        super().__init__(message, **kwargs)
         if file_type:
             self.details["file_type"] = file_type
 
@@ -62,7 +67,8 @@ class ModelServiceError(TurtleChatException):
     """AI model service related errors."""
     
     def __init__(self, message: str, service: str = None, model: str = None, **kwargs):
-        super().__init__(message, error_code="MODEL_SERVICE_ERROR", **kwargs)
+        kwargs.setdefault("error_code", "MODEL_SERVICE_ERROR")
+        super().__init__(message, **kwargs)
         self.service = service
         self.model = model
         if service:
@@ -75,21 +81,24 @@ class BedrockError(ModelServiceError):
     """AWS Bedrock specific errors."""
     
     def __init__(self, message: str, **kwargs):
-        super().__init__(message, service="bedrock", error_code="BEDROCK_ERROR", **kwargs)
+        kwargs.setdefault("error_code", "BEDROCK_ERROR")
+        super().__init__(message, service="bedrock", **kwargs)
 
 
 class XAIError(ModelServiceError):
     """xAI API specific errors."""
     
     def __init__(self, message: str, **kwargs):
-        super().__init__(message, service="xai", error_code="XAI_ERROR", **kwargs)
+        kwargs.setdefault("error_code", "XAI_ERROR")
+        super().__init__(message, service="xai", **kwargs)
 
 
 class NetworkError(TurtleChatException):
     """Network connectivity and API communication errors."""
     
     def __init__(self, message: str, endpoint: str = None, status_code: int = None, **kwargs):
-        super().__init__(message, error_code="NETWORK_ERROR", **kwargs)
+        kwargs.setdefault("error_code", "NETWORK_ERROR")
+        super().__init__(message, **kwargs)
         self.endpoint = endpoint
         self.status_code = status_code
         if endpoint:
@@ -102,7 +111,8 @@ class TimeoutError(NetworkError):
     """Request timeout errors."""
     
     def __init__(self, message: str = "Request timed out", timeout: int = None, **kwargs):
-        super().__init__(message, error_code="TIMEOUT_ERROR", **kwargs)
+        kwargs.setdefault("error_code", "TIMEOUT_ERROR")
+        super().__init__(message, **kwargs)
         if timeout:
             self.details["timeout"] = timeout
 
@@ -111,7 +121,8 @@ class RateLimitError(NetworkError):
     """Rate limiting errors."""
     
     def __init__(self, message: str = "Rate limit exceeded", retry_after: int = None, **kwargs):
-        super().__init__(message, error_code="RATE_LIMIT_ERROR", **kwargs)
+        kwargs.setdefault("error_code", "RATE_LIMIT_ERROR")
+        super().__init__(message, **kwargs)
         if retry_after:
             self.details["retry_after"] = retry_after
 
@@ -120,7 +131,8 @@ class ConfigurationError(TurtleChatException):
     """Configuration and setup errors."""
     
     def __init__(self, message: str, config_key: str = None, **kwargs):
-        super().__init__(message, error_code="CONFIG_ERROR", **kwargs)
+        kwargs.setdefault("error_code", "CONFIG_ERROR")
+        super().__init__(message, **kwargs)
         self.config_key = config_key
         if config_key:
             self.details["config_key"] = config_key
@@ -130,7 +142,8 @@ class ValidationError(TurtleChatException):
     """Input validation errors."""
     
     def __init__(self, message: str, field: str = None, value: str = None, **kwargs):
-        super().__init__(message, error_code="VALIDATION_ERROR", **kwargs)
+        kwargs.setdefault("error_code", "VALIDATION_ERROR")
+        super().__init__(message, **kwargs)
         self.field = field
         self.value = value
         if field:
@@ -143,7 +156,8 @@ class ConversationError(TurtleChatException):
     """Conversation management errors."""
     
     def __init__(self, message: str, conversation_id: str = None, **kwargs):
-        super().__init__(message, error_code="CONVERSATION_ERROR", **kwargs)
+        kwargs.setdefault("error_code", "CONVERSATION_ERROR")
+        super().__init__(message, **kwargs)
         self.conversation_id = conversation_id
         if conversation_id:
             self.details["conversation_id"] = conversation_id
@@ -153,7 +167,8 @@ class StorageError(TurtleChatException):
     """Storage and persistence errors."""
     
     def __init__(self, message: str, operation: str = None, **kwargs):
-        super().__init__(message, error_code="STORAGE_ERROR", **kwargs)
+        kwargs.setdefault("error_code", "STORAGE_ERROR")
+        super().__init__(message, **kwargs)
         self.operation = operation
         if operation:
             self.details["operation"] = operation
@@ -163,14 +178,16 @@ class EncryptionError(TurtleChatException):
     """Encryption and decryption errors."""
     
     def __init__(self, message: str = "Encryption operation failed", **kwargs):
-        super().__init__(message, error_code="ENCRYPTION_ERROR", **kwargs)
+        kwargs.setdefault("error_code", "ENCRYPTION_ERROR")
+        super().__init__(message, **kwargs)
 
 
 class ExportError(TurtleChatException):
     """Export operation errors."""
     
     def __init__(self, message: str, export_format: str = None, **kwargs):
-        super().__init__(message, error_code="EXPORT_ERROR", **kwargs)
+        kwargs.setdefault("error_code", "EXPORT_ERROR")
+        super().__init__(message, **kwargs)
         self.export_format = export_format
         if export_format:
             self.details["export_format"] = export_format
@@ -180,7 +197,8 @@ class UIError(TurtleChatException):
     """User interface related errors."""
     
     def __init__(self, message: str, component: str = None, **kwargs):
-        super().__init__(message, error_code="UI_ERROR", **kwargs)
+        kwargs.setdefault("error_code", "UI_ERROR")
+        super().__init__(message, **kwargs)
         self.component = component
         if component:
             self.details["component"] = component
