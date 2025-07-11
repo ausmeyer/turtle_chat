@@ -114,7 +114,7 @@ class TurtleChatApp:
             animation: fadeInUp 0.3s ease-out;
         }
         
-        .message-content::before {
+        .chat-message.assistant .message-content::before {
             content: '';
             position: absolute;
             top: 15px;
@@ -126,8 +126,16 @@ class TurtleChatApp:
             border-right: 8px solid #ffffff;
         }
         
-        .chat-message.user .message-content::before {
-            border-right-color: #3b82f6;
+        .chat-message.user .message-content::after {
+            content: '';
+            position: absolute;
+            top: 15px;
+            right: -8px;
+            width: 0;
+            height: 0;
+            border-top: 8px solid transparent;
+            border-bottom: 8px solid transparent;
+            border-left: 8px solid #3b82f6;
         }
         
         /* Enhanced typing indicator */
@@ -439,11 +447,11 @@ class TurtleChatApp:
         """Display information about the selected model."""
         model_config = MODEL_CONFIGS[model_key]
         
-        info_text = f"**Service:** {model_config['service'].upper()}"
+        info_text = f"**Service:** {model_config['service'].upper()}\n\n"
         if 'context_window' in model_config:
-            info_text += f"\n**Context Window:** {model_config['context_window']:,} tokens"
+            info_text += f"**Context Window:** {model_config['context_window']:,} tokens\n\n"
         if 'max_tokens' in model_config:
-            info_text += f"\n**Max Output:** {model_config['max_tokens']:,} tokens"
+            info_text += f"**Max Output:** {model_config['max_tokens']:,} tokens"
         
         st.info(info_text)
     
