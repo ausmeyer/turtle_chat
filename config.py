@@ -27,6 +27,30 @@ MODEL_CONFIGS: Dict[str, Dict[str, Any]] = {
         "context_window": 256000,
         "temperature": 0.1,
         "top_p": 0.9
+    },
+    "gemini-2.5-pro": {
+        "name": "Gemini 2.5 Pro",
+        "service": "vertex",
+        "model_id": "gemini-2.5-pro",
+        "supports_extended_thinking": False,
+        "supports_citations": True,
+        "supports_file_upload": True,
+        "max_tokens": 65535,
+        "context_window": 1048576,
+        "temperature": 0.1,
+        "top_p": 0.9
+    },
+    "gemini-2.5-flash": {
+        "name": "Gemini 2.5 Flash",
+        "service": "vertex",
+        "model_id": "gemini-2.5-flash",
+        "supports_extended_thinking": False,
+        "supports_citations": True,
+        "supports_file_upload": True,
+        "max_tokens": 65535,
+        "context_window": 1048576,
+        "temperature": 0.1,
+        "top_p": 0.9
     }
 }
 

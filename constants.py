@@ -18,6 +18,7 @@ DEFAULT_THINKING_TOKENS = 4000
 
 # API Configuration
 XAI_API_URL = "https://api.x.ai/v1/chat/completions"
+VERTEX_AI_LOCATION = "us-central1"  # Default location for Vertex AI
 REQUEST_TIMEOUT_LOCAL = 60
 REQUEST_TIMEOUT_CLOUD = 300  # 5 minutes for cloud - very generous
 MAX_RETRIES = 3
@@ -27,7 +28,7 @@ RETRY_STATUS_CODES = [429, 500, 502, 503, 504]
 # UI Constants
 CHAT_INPUT_PLACEHOLDER = "Enter your message..."
 TYPING_INDICATOR_MESSAGES = [
-    "Claude is thinking...",
+    "{model} is thinking...",
     "Processing your request...",
     "Analyzing the content...",
     "Generating response..."

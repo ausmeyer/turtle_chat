@@ -93,6 +93,14 @@ class XAIError(ModelServiceError):
         super().__init__(message, service="xai", **kwargs)
 
 
+class VertexAIError(ModelServiceError):
+    """Google Vertex AI specific errors."""
+    
+    def __init__(self, message: str, **kwargs):
+        kwargs.setdefault("error_code", "VERTEX_AI_ERROR")
+        super().__init__(message, service="vertex", **kwargs)
+
+
 class NetworkError(TurtleChatException):
     """Network connectivity and API communication errors."""
     
@@ -258,6 +266,13 @@ def handle_exception(exception: Exception, context: str = None) -> str:
     
     elif isinstance(exception, XAIError):
         return "Error with xAI service. Please try again later."
+    
+    elif isinstance(exception, VertexAIError):
+        if "not found" in str(exception) and "gemini-2.5-pro" in str(exception):
+            return "Gemini 2.5 Pro is not available in your Google Cloud project or region. Please try Gemini 2.5 Flash instead, or ensure your project has access to Gemini 2.5 Pro."
+        elif "not found" in str(exception):
+            return "The requested Gemini model is not available in your Google Cloud project. Please check your Vertex AI model access or try Gemini 2.5 Flash."
+        return "Error with Google Vertex AI service. Please try again later."
     
     elif isinstance(exception, ConfigurationError):
         return "Configuration error. Please check your settings."

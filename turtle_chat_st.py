@@ -32,8 +32,10 @@ class TurtleChatApp:
         self.bedrock_runtime = None
         self.textract_client = None
         self.s3_client = None
+        self.vertex_client = None
         self.logger = self._setup_logging()
         self._initialize_aws_clients()
+        self._initialize_vertex_client()
         
     def _setup_logging(self) -> logging.Logger:
         """Set up logging configuration."""
@@ -63,6 +65,61 @@ class TurtleChatApp:
         except Exception as e:
             self.logger.error(f"Failed to initialize AWS clients: {e}")
             raise ConfigurationError(f"AWS configuration failed: {e}")
+    
+    def _initialize_vertex_client(self) -> None:
+        """Initialize Google Vertex AI client if credentials are available."""
+        try:
+            if hasattr(st.secrets, 'vertex_credentials'):
+                # Set up Google Cloud credentials
+                import json
+                import tempfile
+                from google.cloud import aiplatform
+                from google.oauth2 import service_account
+                
+                # Create credentials from service account info
+                service_account_info = json.loads(st.secrets.vertex_credentials.service_account_json)
+                credentials = service_account.Credentials.from_service_account_info(service_account_info)
+                
+                # Initialize Vertex AI
+                project_id = st.secrets.vertex_credentials.project_id
+                location = getattr(st.secrets.vertex_credentials, 'location', VERTEX_AI_LOCATION)
+                
+                # Try different locations if the model isn't available
+                locations_to_try = [location, 'us-central1', 'us-east1', 'us-west1', 'europe-west1']
+                
+                for loc in locations_to_try:
+                    try:
+                        self.logger.info(f"Trying to initialize Vertex AI in location: {loc}")
+                        aiplatform.init(
+                            project=project_id,
+                            location=loc,
+                            credentials=credentials
+                        )
+                        self.vertex_location = loc
+                        self.logger.info(f"Successfully initialized Vertex AI in location: {loc}")
+                        break
+                    except Exception as e:
+                        self.logger.debug(f"Failed to initialize in {loc}: {e}")
+                        continue
+                else:
+                    # If all locations fail, use the original location
+                    aiplatform.init(
+                        project=project_id,
+                        location=location,
+                        credentials=credentials
+                    )
+                    self.vertex_location = location
+                
+                self.vertex_client = aiplatform
+                self.vertex_project_id = project_id
+                self.vertex_location = location
+                
+                self.logger.info("Vertex AI client initialized successfully")
+        except Exception as e:
+            self.logger.error(f"Failed to initialize Vertex AI client: {e}")
+            # Store the error for debugging
+            self.vertex_init_error = str(e)
+            # Don't raise error for Vertex AI - it's optional
     
     def run(self) -> None:
         """Main application entry point."""
@@ -421,6 +478,13 @@ class TurtleChatApp:
         # Display model info
         self._display_model_info(selected_model)
         
+        # Show debug info in an expander
+        debug_info = self._get_debug_info(available_models)
+        with st.expander("🔧 Debug Info", expanded=False):
+            for info in debug_info:
+                st.write(info)
+            st.write(f"Available models: {available_models}")
+        
         # Show warning for xAI on Streamlit Cloud
         if (selected_model == "grok-4" and self._is_cloud_environment()):
             st.warning("⚠️ **Streamlit Cloud Notice:** Grok 4 may experience connection issues on Streamlit Cloud due to networking restrictions. Claude Sonnet 4 is more reliable for cloud deployments.")
@@ -437,13 +501,68 @@ class TurtleChatApp:
         if self._check_xai_credentials():
             available_models.append("grok-4")
         
+        # Check Vertex AI
+        if self._check_vertex_credentials():
+            available_models.extend(["gemini-2.5-pro", "gemini-2.5-flash"])
+        
         return available_models
+    
+    def _get_debug_info(self, available_models: List[str]) -> List[str]:
+        """Get debug information about service availability."""
+        debug_info = []
+        
+        # AWS Bedrock info
+        if self.bedrock_runtime is not None:
+            debug_info.append("✅ AWS Bedrock configured")
+        else:
+            debug_info.append("❌ AWS Bedrock not available")
+        
+        # xAI info
+        if "xai_credentials" in st.secrets:
+            if "api_key" in st.secrets["xai_credentials"]:
+                debug_info.append("✅ xAI credentials configured")
+            else:
+                debug_info.append("❌ xAI api_key missing from secrets")
+        else:
+            debug_info.append("❌ xAI credentials section missing from secrets")
+        
+        # Vertex AI info
+        if self._check_vertex_credentials():
+            debug_info.append("✅ Vertex AI credentials configured")
+        else:
+            # Add detailed debug info for Vertex AI
+            vertex_debug = []
+            if not hasattr(st.secrets, 'vertex_credentials'):
+                vertex_debug.append("vertex_credentials section missing")
+            else:
+                if "service_account_json" not in st.secrets.vertex_credentials:
+                    vertex_debug.append("service_account_json missing")
+                if "project_id" not in st.secrets.vertex_credentials:
+                    vertex_debug.append("project_id missing")
+            
+            if self.vertex_client is None:
+                init_error = getattr(self, 'vertex_init_error', 'unknown error')
+                vertex_debug.append(f"initialization failed: {init_error}")
+            
+            debug_info.append(f"❌ Vertex AI not available: {', '.join(vertex_debug) if vertex_debug else 'unknown issue'}")
+        
+        return debug_info
     
     def _check_xai_credentials(self) -> bool:
         """Check if xAI credentials are available."""
         try:
             return ("xai_credentials" in st.secrets and 
                    "api_key" in st.secrets["xai_credentials"])
+        except Exception:
+            return False
+    
+    def _check_vertex_credentials(self) -> bool:
+        """Check if Vertex AI credentials are available."""
+        try:
+            return (self.vertex_client is not None and
+                   "vertex_credentials" in st.secrets and 
+                   "service_account_json" in st.secrets["vertex_credentials"] and
+                   "project_id" in st.secrets["vertex_credentials"])
         except Exception:
             return False
     
@@ -1064,7 +1183,14 @@ class TurtleChatApp:
     def _display_enhanced_typing_indicator(self) -> None:
         """Display enhanced typing indicator."""
         import random
-        message = random.choice(TYPING_INDICATOR_MESSAGES)
+        
+        # Get the selected model name
+        selected_model_key = st.session_state.get("selected_model", "claude-sonnet-4")
+        model_name = MODEL_CONFIGS.get(selected_model_key, {}).get("name", "AI")
+        
+        # Get a random message and format it with the model name
+        message_template = random.choice(TYPING_INDICATOR_MESSAGES)
+        message = message_template.format(model=model_name)
         
         st.markdown(f"""
         <div class="typing-indicator-enhanced">
@@ -1115,6 +1241,8 @@ class TurtleChatApp:
             # Route to appropriate service
             if model_config["service"] == "xai":
                 return self._get_xai_response(prompt, model_config)
+            elif model_config["service"] == "vertex":
+                return self._get_vertex_response(prompt, model_config)
             else:
                 return self._get_bedrock_response(prompt, model_config)
                 
@@ -1228,18 +1356,153 @@ class TurtleChatApp:
                     status_code=response.status_code
                 )
                 
-        except requests.exceptions.Timeout:
+        except (requests.exceptions.Timeout, requests.exceptions.ReadTimeout):
             if self._is_cloud_environment():
                 raise TimeoutError(f"xAI request timed out after {timeout} seconds on Streamlit Cloud. Cloud networking can be unreliable for external APIs. Consider using Claude Sonnet 4 for better reliability.", timeout=timeout)
             else:
                 raise TimeoutError(f"Request timed out after {timeout} seconds. This may be due to network conditions.", timeout=timeout)
         except requests.exceptions.ConnectionError as e:
-            if self._is_cloud_environment():
-                raise NetworkError(f"Streamlit Cloud cannot connect to xAI service. This may be due to Streamlit Cloud's networking restrictions. Consider using Claude Sonnet 4 instead. Details: {str(e)}")
+            # Check if this is specifically a read timeout wrapped in ConnectionError
+            if "Read timed out" in str(e) or "ReadTimeoutError" in str(e):
+                if self._is_cloud_environment():
+                    raise TimeoutError(f"xAI request timed out after {timeout} seconds on Streamlit Cloud. Cloud networking can be unreliable for external APIs. Consider using Claude Sonnet 4 for better reliability.", timeout=timeout)
+                else:
+                    raise TimeoutError(f"Request timed out after {timeout} seconds. This may be due to network conditions.", timeout=timeout)
             else:
-                raise NetworkError(f"Cannot connect to xAI service. Please check your internet connection. Details: {str(e)}")
+                if self._is_cloud_environment():
+                    raise NetworkError(f"Streamlit Cloud cannot connect to xAI service. This may be due to Streamlit Cloud's networking restrictions. Consider using Claude Sonnet 4 instead. Details: {str(e)}")
+                else:
+                    raise NetworkError(f"Cannot connect to xAI service. Please check your internet connection. Details: {str(e)}")
         except requests.exceptions.RequestException as e:
             raise NetworkError(f"Network error occurred: {str(e)}")
+    
+    def _get_vertex_response(self, prompt: str, model_config: Dict) -> str:
+        """Get response from Google Vertex AI."""
+        try:
+            if not self.vertex_client:
+                raise ConfigurationError("Google Vertex AI not configured")
+            
+            from vertexai.generative_models import GenerativeModel, ChatSession
+            
+            # Try different model ID formats for Gemini models
+            model_id = model_config["model_id"]
+            model = None
+            
+            try:
+                self.logger.info(f"Trying primary model ID: {model_id}")
+                model = GenerativeModel(model_id)
+                self.logger.info(f"Successfully initialized with model ID: {model_id}")
+            except Exception as e:
+                self.logger.warning(f"Primary model ID failed: {e}")
+                
+                # Try alternative model IDs if the primary fails
+                alternative_ids = []
+                if "2.5-pro" in model_id:
+                    alternative_ids = [
+                        "gemini-2.5-pro",
+                        "gemini-2.5-pro-preview-06-05",
+                        "gemini-2.5-flash",  # Fallback to 2.5 Flash
+                        "gemini-2.5-flash-001"
+                    ]
+                elif "2.5-flash" in model_id:
+                    alternative_ids = [
+                        "gemini-2.5-flash",
+                        "gemini-2.5-flash-001"
+                    ]
+                
+                for alt_id in alternative_ids:
+                    try:
+                        self.logger.info(f"Trying alternative model ID: {alt_id}")
+                        model = GenerativeModel(alt_id)
+                        
+                        # Inform user about fallbacks
+                        if "2.5-flash" in alt_id and "2.5-pro" in model_id:
+                            self.logger.warning(f"Fell back to Gemini 2.5 Flash since 2.5 Pro is not available in your project/region")
+                            st.warning("⚠️ Gemini 2.5 Pro is not available in your project/region. Using Gemini 2.5 Flash instead.")
+                        
+                        self.logger.info(f"Successfully initialized with model ID: {alt_id}")
+                        break
+                    except Exception as alt_e:
+                        self.logger.debug(f"Failed with {alt_id}: {alt_e}")
+                        continue
+                
+                if model is None:
+                    available_models = ["gemini-2.5-flash", "gemini-2.5-pro"]
+                    error_msg = f"Could not initialize any Gemini model. Tried: {[model_id] + alternative_ids}. Please ensure your Google Cloud project has access to Gemini models. You may need to enable the Vertex AI API or request access to Gemini 2.5 models. Available models in most regions: {available_models}. Original error: {e}"
+                    raise VertexAIError(error_msg)
+            
+            # Build conversation messages
+            messages = self._build_conversation_messages_for_vertex(prompt)
+            
+            # Create chat session if we have history
+            if len(messages) > 1:
+                # Start chat with history
+                chat = model.start_chat()
+                
+                # Send previous messages
+                for msg in messages[:-1]:
+                    if msg["role"] == "user":
+                        chat.send_message(msg["content"])
+                
+                # Send current message and get response
+                response = chat.send_message(
+                    messages[-1]["content"],
+                    generation_config={
+                        "max_output_tokens": model_config["max_tokens"],
+                        "temperature": model_config.get("temperature", 0.1),
+                        "top_p": model_config.get("top_p", 0.9)
+                    }
+                )
+            else:
+                # Single message
+                response = model.generate_content(
+                    prompt,
+                    generation_config={
+                        "max_output_tokens": model_config["max_tokens"],
+                        "temperature": model_config.get("temperature", 0.1),
+                        "top_p": model_config.get("top_p", 0.9)
+                    }
+                )
+            
+            # Log request
+            self._log_audit_event("vertex_request", SessionUtils.get_user_id(), {
+                "model": model_config["model_id"],
+                "prompt_length": len(prompt),
+                "response_length": len(response.text)
+            })
+            
+            return response.text
+            
+        except Exception as e:
+            self.logger.error(f"Vertex AI error: {e}")
+            raise VertexAIError(f"Google Vertex AI error: {e}")
+    
+    def _build_conversation_messages_for_vertex(self, current_prompt: str) -> List[Dict]:
+        """Build conversation messages for Vertex AI format."""
+        messages = []
+        
+        # Add conversation history
+        conversation_history = st.session_state.messages[:-1] if len(st.session_state.messages) > 1 else []
+        
+        for msg in conversation_history:
+            if msg["role"] == "user":
+                messages.append({"role": "user", "content": msg["content"]})
+            elif msg["role"] == "assistant":
+                messages.append({"role": "model", "content": msg["content"]})  # Vertex uses "model" instead of "assistant"
+        
+        # Add current message with file content if available
+        if st.session_state.get("file_content"):
+            current_message = f"""Here is the content of an uploaded file:
+
+{st.session_state.file_content}
+
+User's question: {current_prompt}"""
+        else:
+            current_message = current_prompt
+        
+        messages.append({"role": "user", "content": current_message})
+        
+        return messages
     
     def _is_cloud_environment(self) -> bool:
         """Check if running in cloud environment."""
